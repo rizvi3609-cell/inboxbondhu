@@ -8,6 +8,8 @@ import { createLogger } from '@inboxbondhu/logger'
 import {
   bootDataLayer, drainRedisBuffer, makeKeyring, shutdownDataLayer,
   sweepAbandonedOrders, sweepExpiredReservations, sweepStuckMessages,
+  dispatchOutboxBatch, purgeDispatchedOutbox, createMockEmailClient,
+  reconcileUsage, reconcileStock, PlansService, ChannelConnection,
   type DbClients,
 } from '@inboxbondhu/core'
 import { withJobLock } from './jobLock.js'
@@ -73,9 +75,15 @@ async function main(): Promise<void> {
   // Phase 6: conversation-ai. OPEN QUESTION: mock LLM until a live key —
   // swap is createMockLlmClient → the real OpenAI client, one line.
   const { client: llmClient } = createMockLlmClient()
+  const plansService = new PlansService()
   const conversationAi = makeConversationAiProcessor({
     log,
     llm: llmClient,
+    quotaCheck: async (workspaceId) => {
+      const s = await plansService.quotaStatus(workspaceId)
+      await plansService.maybeWarn(workspaceId).catch(() => undefined) // 80/100% notices
+      return { aiPaused: s.aiPaused }
+    },
     enqueueOutbound: async (job) => {
       await queueByName.get('outbound-message')!.add('outbound-message', job as unknown as JobEnvelope)
     },
@@ -146,6 +154,56 @@ async function main(): Promise<void> {
     }).catch((err: Error) => log.warn({ err: err.message }, 'abandonedOrderSweeper failed'))
   }, 900_000)
   abandonedInterval.unref()
+
+  // outboxDispatcher — every 5 s (§13.2): pending rows → email/socket,
+  // 30s/2m/10m retries then dead. Mock email client until a Resend key
+  // (same one-file-swap pattern as meta/llm).
+  const { client: emailClient } = createMockEmailClient()
+  const dispatcherInterval = setInterval(() => {
+    void withJobLock(clients.redis, 'outboxDispatcher', 4_000, () =>
+      dispatchOutboxBatch({ email: emailClient }),
+    ).then((r) => {
+      if (r && (r.dispatched > 0 || r.dead > 0)) log.info(r, 'outboxDispatcher')
+    }).catch((err: Error) => log.warn({ err: err.message }, 'outboxDispatcher failed'))
+  }, 5_000)
+  dispatcherInterval.unref()
+
+  // usageReconciler — hourly (§13.2): Mongo authoritative, Redis corrected.
+  const usageInterval = setInterval(() => {
+    void withJobLock(clients.redis, 'usageReconciler', 3_500_000, () => reconcileUsage())
+      .then((r) => { if (r && r.reconciled > 0) log.info(r, 'usageReconciler') })
+      .catch((err: Error) => log.warn({ err: err.message }, 'usageReconciler failed'))
+  }, 3_600_000)
+  usageInterval.unref()
+
+  // tokenExpiryChecker — hourly (§13.2): channels expiring <7d → mark + notify.
+  const tokenInterval = setInterval(() => {
+    void withJobLock(clients.redis, 'tokenExpiryChecker', 3_500_000, async () => {
+      const soon = new Date(Date.now() + 7 * 86_400_000)
+      const expiring = await ChannelConnection.find({ status: 'active', tokenExpiresAt: { $lt: soon, $ne: null } })
+        .setOptions({ skipTenancy: true, tenancyBypassCaller: 'nightlyIntegrityJob' })
+        .limit(100).exec()
+      for (const ch of expiring) {
+        log.warn({ workspaceId: String(ch.workspaceId), pageName: ch.pageName }, 'ALERT channel.expiring')
+      }
+      return { expiring: expiring.length }
+    }).catch((err: Error) => log.warn({ err: err.message }, 'tokenExpiryChecker failed'))
+  }, 3_600_000)
+  tokenInterval.unref()
+
+  // nightly integrity: stock reconciliation (§6.6) + outbox purge, daily 03:00-ish.
+  const nightlyInterval = setInterval(() => {
+    void withJobLock(clients.redis, 'nightlyIntegrityJob', 3_500_000, async () => {
+      const stock = await reconcileStock()
+      if (stock.mismatches.length > 0) {
+        log.error({ mismatches: stock.mismatches }, 'ALERT order.oversell_detected — SEV: any occurrence pages')
+      }
+      const purged = await purgeDispatchedOutbox()
+      return { checked: stock.checked, mismatches: stock.mismatches.length, purged: purged.purged }
+    }).then((r) => { if (r) log.info(r, 'nightlyIntegrityJob') })
+      .catch((err: Error) => log.warn({ err: err.message }, 'nightlyIntegrityJob failed'))
+  }, 24 * 3_600_000)
+  nightlyInterval.unref()
 
   const drainerInterval = setInterval(() => {
     void drainRedisBuffer(clients.redis, async (jobData) => {

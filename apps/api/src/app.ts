@@ -5,7 +5,7 @@
 import express, { type Express } from 'express'
 import cookieParser from 'cookie-parser'
 import type { Redis } from 'ioredis'
-import type { CatalogueService, ChannelsService, DbClients, InboxService, KnowledgeService, OrdersService, PaymentsService } from '@inboxbondhu/core'
+import type { CatalogueService, ChannelsService, DbClients, InboxService, KnowledgeService, ObservabilityService, OrdersService, PaymentsService, PlansService } from '@inboxbondhu/core'
 import { healthCheck, IdentityService, WorkspaceService } from '@inboxbondhu/core'
 import {
   auth as authMiddleware, csrf as csrfMiddleware, tenant as tenantMiddleware,
@@ -17,6 +17,8 @@ import { channelsRouter } from './routes/v1/channels.js'
 import { conversationsRouter, messagesRouter } from './routes/v1/conversations.js'
 import { importsRouter, knowledgeRouter, productsRouter } from './routes/v1/catalogue.js'
 import { ordersRouter, paymentsRouter } from './routes/v1/orders.js'
+import { opsRouter, realtimeTicketRouter } from './routes/v1/ops.js'
+import type { Queue } from 'bullmq'
 import { metaWebhookRouter, type MetaWebhookDeps } from './routes/webhooks/meta.js'
 
 export interface AppDeps {
@@ -40,6 +42,13 @@ export interface AppDeps {
   inbox?: { service: InboxService }
   /** Phase 7: orders + payments routes (#58–65). */
   orders?: { orders: OrdersService; payments: PaymentsService }
+  /** Phase 8: analytics/usage/settings/plan/audit/jobs + realtime ticket. */
+  ops?: {
+    observability: ObservabilityService
+    plans: PlansService
+    queues: Map<string, Queue>
+    ticketSecret: string
+  }
   /** Phase 5: catalogue + knowledge routes (#46–57). */
   catalogue?: {
     catalogue: CatalogueService
@@ -154,6 +163,22 @@ export function createApp(deps: AppDeps): Express {
       }))
       app.use('/api/v1/w/:workspaceId/imports', ...chain, importsRouter({ catalogue: deps.catalogue.catalogue }))
       app.use('/api/v1/w/:workspaceId/knowledge', ...chain, knowledgeRouter({ knowledge: deps.catalogue.knowledge }))
+    }
+
+    // #24 + #66–76: realtime ticket (session-scoped) and workspace ops.
+    if (deps.ops) {
+      app.use('/api/v1/realtime', realtimeTicketRouter({
+        jwtSecret: deps.auth.jwtSecret,
+        jwtSecretPrevious: deps.auth.jwtSecretPrevious,
+        ticketSecret: deps.ops.ticketSecret,
+      }))
+      app.use(
+        '/api/v1/w/:workspaceId',
+        authMiddleware(deps.auth.jwtSecret, deps.auth.jwtSecretPrevious),
+        csrfMiddleware(),
+        tenantMiddleware(redis),
+        opsRouter({ observability: deps.ops.observability, plans: deps.ops.plans, queues: deps.ops.queues }),
+      )
     }
 
     // #58–65: /w/:workspaceId/{orders,payments}.

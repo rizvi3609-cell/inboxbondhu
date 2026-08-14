@@ -23,6 +23,8 @@ export interface AiPipelineDeps {
   costPerMTokensMinor?: number
   /** AI_DAILY_COST_CAP_MINOR from config — trigger 11. */
   dailyCostCapMinor?: number
+  /** Plans quota gate (P8): 100% conversation quota pauses AI, not humans. */
+  quotaCheck?: (workspaceId: string) => Promise<{ aiPaused: boolean }>
   totalDeadlineMs?: number
   llmBudgetMs?: number
   now?: () => Date
@@ -95,6 +97,14 @@ export async function runAiPipeline(
     if (!workspace || !aiConfig || !aiConfig.enabled || !aiConfig.autoReplyEnabled) {
       deadline.clear()
       return { outcome: 'skipped', latencyMs: latency() }
+    }
+
+    // ── Plan quota soft block (P8): AI pauses at 100%, humans continue ─────
+    if (deps.quotaCheck) {
+      const quota = await deps.quotaCheck(workspaceId)
+      if (quota.aiPaused) {
+        return handover('conversation quota reached — AI paused')
+      }
     }
 
     // ── Trigger 11: workspace cost cap (§10.7). The ledger is monthly

@@ -35,7 +35,7 @@ async function main(): Promise<void> {
   const webhookIngestQueue = new Queue('webhook-ingest', { connection: { url: config.REDIS_URL } })
 
   // Phase 4: inbox service — outbound-message queue + Redis idempotency store.
-  const { InboxService, redisIdempotencyStore, CatalogueService, KnowledgeService, OrdersService, PaymentsService } = await import('@inboxbondhu/core')
+  const { InboxService, redisIdempotencyStore, CatalogueService, KnowledgeService, OrdersService, PaymentsService, ObservabilityService, PlansService } = await import('@inboxbondhu/core')
   const outboundQueue = new Queue('outbound-message', { connection: { url: config.REDIS_URL } })
   const inboxService = new InboxService(redisIdempotencyStore(clients.redis), async (job) => {
     await outboundQueue.add('outbound-message', job)
@@ -50,6 +50,16 @@ async function main(): Promise<void> {
   const ordersService = new OrdersService(redisIdempotencyStore(clients.redis))
   const paymentsService = new PaymentsService()
 
+  // Phase 8: ops + realtime.
+  const observabilityService = new ObservabilityService()
+  const plansService = new PlansService()
+  const opsQueues = new Map(
+    ['webhook-ingest', 'conversation-ai', 'outbound-message', 'csv-import', 'email', 'payment-events'].map(
+      (name) => [name, new Queue(name, { connection: { url: config.REDIS_URL } })] as const,
+    ),
+  )
+
+  const { createRealtimeGateway } = await import('./realtime/gateway.js')
   const app = createApp({
     clients,
     version: VERSION,
@@ -74,6 +84,12 @@ async function main(): Promise<void> {
     },
     inbox: { service: inboxService },
     orders: { orders: ordersService, payments: paymentsService },
+    ops: {
+      observability: observabilityService,
+      plans: plansService,
+      queues: opsQueues,
+      ticketSecret: config.JWT_SECRET, // dedicated secret joins config in P9 hardening
+    },
     catalogue: {
       catalogue: catalogueService,
       knowledge: knowledgeService,
@@ -85,6 +101,8 @@ async function main(): Promise<void> {
   const server: Server = app.listen(config.PORT, '0.0.0.0', () => {
     log.info({ port: config.PORT }, 'api listening')
   })
+  const realtime = createRealtimeGateway(server, clients.redis, config.JWT_SECRET)
+  void realtime // fan-out consumers arrive with the dispatcher wiring below
 
   // Graceful shutdown: stop accepting, drain in-flight, close connections.
   let shuttingDown = false

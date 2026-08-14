@@ -94,6 +94,7 @@ export interface ConversationAiJob {
 export function makeConversationAiProcessor(deps: {
   log: Logger
   llm: LlmClient
+  quotaCheck?: (workspaceId: string) => Promise<{ aiPaused: boolean }>
   enqueueOutbound: (job: { workspaceId: string; requestId: string; payload: { messageId: string } }) => Promise<void>
   acquireConvLock: (conversationId: string) => Promise<boolean>
   releaseConvLock: (conversationId: string) => Promise<void>
@@ -111,6 +112,7 @@ export function makeConversationAiProcessor(deps: {
         llm: deps.llm,
         retriever: mongoTextRetriever,
         enqueueOutbound: deps.enqueueOutbound,
+        ...(deps.quotaCheck ? { quotaCheck: deps.quotaCheck } : {}),
       })
       deps.log.info(
         { requestId, workspaceId, conversationId: payload.conversationId, outcome: result.outcome, intent: result.intent, latencyMs: result.latencyMs },

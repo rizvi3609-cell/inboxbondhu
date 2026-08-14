@@ -16,6 +16,9 @@ export * from './modules/knowledge/index.js'
 export * from './modules/ai/index.js'
 export * from './modules/orders/index.js'
 export * from './modules/payments/index.js'
+export * from './modules/plans/index.js'
+export * from './modules/notifications/index.js'
+export * from './modules/observability/index.js'
 export {
   bootDataLayer,
   shutdownDataLayer,
