@@ -14,6 +14,8 @@ export * from './modules/inbox/index.js'
 export * from './modules/catalogue/index.js'
 export * from './modules/knowledge/index.js'
 export * from './modules/ai/index.js'
+export * from './modules/orders/index.js'
+export * from './modules/payments/index.js'
 export {
   bootDataLayer,
   shutdownDataLayer,

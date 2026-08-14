@@ -40,13 +40,17 @@ const statusHistorySchema = new Schema(
 const orderSchema = new Schema(
   {
     workspaceId: { type: Schema.Types.ObjectId, required: true, ref: 'Workspace' },
-    orderNumber: { type: Number, required: true, min: 1 },
-    orderYear: { type: Number, required: true, immutable: true },
+    // CONFLICT (flagged): database.md §2.12 marks these required, but T1
+    // (prompt.md §11.4, mandated verbatim) assigns them ONLY at first
+    // confirmation — drafts in Collecting/AwaitingConfirmation cannot carry
+    // them. Narrow resolution: optional at insert, immutable once set,
+    // uniqueness via PARTIAL indexes below.
+    orderNumber: { type: Number, min: 1, default: null },
+    orderYear: { type: Number, default: null },
     orderCode: {
       type: String,
-      required: true,
-      immutable: true,
       match: /^ORD-\d{4}-\d{5}$/, // DB-unenforceable-rule companion: regex validator
+      default: null,
     },
     conversationId: { type: Schema.Types.ObjectId, required: true, ref: 'Conversation' },
     customerId: { type: Schema.Types.ObjectId, required: true, ref: 'Customer' },
@@ -85,6 +89,7 @@ const orderSchema = new Schema(
     paymentRef: { type: String, default: null },
     statusHistory: { type: [statusHistorySchema], required: true, default: [] },
     createdByType: { type: String, required: true, enum: ['ai', 'agent'] },
+    draftLastTouchedAt: { type: Date, default: null }, // §11.2 — abandonedOrderSweeper key
     confirmedAt: { type: Date, default: null },
     cancelledAt: { type: Date, default: null },
     cancellationReason: { type: String, default: null },
@@ -120,12 +125,18 @@ orderSchema.methods['recalculate'] = function (this: {
   this.totalMinor = Money.add(Money.sub(subtotal, this.discountMinor), this.deliveryFeeMinor)
 }
 
-orderSchema.index({ workspaceId: 1, orderYear: 1, orderNumber: 1 }, { unique: true, name: 'I38' })
-orderSchema.index({ workspaceId: 1, orderCode: 1 }, { unique: true, name: 'I39' })
+orderSchema.index(
+  { workspaceId: 1, orderYear: 1, orderNumber: 1 },
+  { unique: true, name: 'I38', partialFilterExpression: { orderNumber: { $type: 'number' } } },
+)
+orderSchema.index(
+  { workspaceId: 1, orderCode: 1 },
+  { unique: true, name: 'I39', partialFilterExpression: { orderCode: { $type: 'string' } } },
+)
 orderSchema.index({ workspaceId: 1, fulfillmentStatus: 1, createdAt: -1 }, { name: 'I40' })
 orderSchema.index({ workspaceId: 1, customerId: 1, createdAt: -1 }, { name: 'I41' })
 orderSchema.index(
-  { fulfillmentStatus: 1, createdAt: 1 },
+  { fulfillmentStatus: 1, draftLastTouchedAt: 1 },
   { name: 'I42', partialFilterExpression: { fulfillmentStatus: 'Collecting' } },
 )
 orderSchema.index({ workspaceId: 1, conversationId: 1 }, { name: 'I43' })

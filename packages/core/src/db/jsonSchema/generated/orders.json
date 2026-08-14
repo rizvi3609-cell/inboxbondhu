@@ -6,22 +6,43 @@
         "bsonType": "objectId"
       },
       "orderNumber": {
-        "bsonType": [
-          "int",
-          "long"
-        ],
-        "minimum": 1
+        "anyOf": [
+          {
+            "bsonType": [
+              "int",
+              "long"
+            ],
+            "minimum": 1
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
       },
       "orderYear": {
-        "bsonType": [
-          "int",
-          "long"
-        ],
-        "minimum": 2020
+        "anyOf": [
+          {
+            "bsonType": [
+              "int",
+              "long"
+            ],
+            "minimum": 2020
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
       },
       "orderCode": {
-        "bsonType": "string",
-        "pattern": "^ORD-\\d{4}-\\d{5}$"
+        "anyOf": [
+          {
+            "bsonType": "string",
+            "pattern": "^ORD-\\d{4}-\\d{5}$"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
       },
       "conversationId": {
         "bsonType": "objectId"
@@ -235,6 +256,16 @@
         "enum": [
           "ai",
           "agent"
+        ]
+      },
+      "draftLastTouchedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
         ]
       },
       "confirmedAt": {

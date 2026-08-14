@@ -6,7 +6,8 @@ import { Worker, Queue, type Processor } from 'bullmq'
 import { loadConfig } from '@inboxbondhu/config'
 import { createLogger } from '@inboxbondhu/logger'
 import {
-  bootDataLayer, drainRedisBuffer, makeKeyring, shutdownDataLayer, sweepStuckMessages,
+  bootDataLayer, drainRedisBuffer, makeKeyring, shutdownDataLayer,
+  sweepAbandonedOrders, sweepExpiredReservations, sweepStuckMessages,
   type DbClients,
 } from '@inboxbondhu/core'
 import { withJobLock } from './jobLock.js'
@@ -123,6 +124,28 @@ async function main(): Promise<void> {
     }).catch((err: Error) => log.warn({ err: err.message }, 'stuckMessageSweeper failed'))
   }, 30_000)
   stuckInterval.unref()
+
+  // reservationExpirySweeper — every 5 min (§13.2): held past expiresAt →
+  // released AND reserved decremented in ONE transaction (DB-07).
+  const reservationInterval = setInterval(() => {
+    void withJobLock(clients.redis, 'reservationExpirySweeper', 240_000, () =>
+      sweepExpiredReservations(),
+    ).then((r) => {
+      if (r && r.released > 0) log.info({ released: r.released }, 'reservationExpirySweeper')
+    }).catch((err: Error) => log.warn({ err: err.message }, 'reservationExpirySweeper failed'))
+  }, 300_000)
+  reservationInterval.unref()
+
+  // abandonedOrderSweeper — every 15 min (§13.2): Collecting >24h stale →
+  // Cancelled(system_abandoned), reservations released.
+  const abandonedInterval = setInterval(() => {
+    void withJobLock(clients.redis, 'abandonedOrderSweeper', 840_000, () =>
+      sweepAbandonedOrders(config.ABANDONED_ORDER_HOURS),
+    ).then((r) => {
+      if (r && r.cancelled > 0) log.info({ cancelled: r.cancelled }, 'abandonedOrderSweeper')
+    }).catch((err: Error) => log.warn({ err: err.message }, 'abandonedOrderSweeper failed'))
+  }, 900_000)
+  abandonedInterval.unref()
 
   const drainerInterval = setInterval(() => {
     void drainRedisBuffer(clients.redis, async (jobData) => {

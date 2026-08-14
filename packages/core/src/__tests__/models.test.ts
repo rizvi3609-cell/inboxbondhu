@@ -230,7 +230,7 @@ describe('orders — orderCode regex + counters', () => {
     expect(counter!.seq).toBe(20)
   })
 
-  it('statusHistory appends and orderYear/orderCode are immutable', async () => {
+  it('statusHistory appends; orderYear set-once is T1-guarded (Phase 7)', async () => {
     const order = await Order.create({
       workspaceId: ws,
       orderNumber: 9,
@@ -248,11 +248,9 @@ describe('orders — orderCode regex + counters', () => {
       createdByType: 'agent',
       purgeAfter: new Date(Date.now() + 90 * 86400_000),
     })
-    // immutable + strict:'throw' → mutating orderYear fails validation at save
-    const tampered = await Order.findOne({ _id: order._id, workspaceId: ws }).exec()
-    tampered!.set('orderYear', 2030)
-    await expect(tampered!.save()).rejects.toThrow(/immutable/)
-
+    // Set-once semantics moved from schema-immutable to T1's !orderCode
+    // guard in Phase 7 (drafts carry null codes until confirmation) — the
+    // schema no longer hard-throws on mutation; T1 never re-assigns.
     order.statusHistory.push({ from: 'Collecting', to: 'AwaitingConfirmation', at: new Date(), byType: 'agent', byUserId: oid() } as never)
     await order.save()
     const fresh = await Order.findOne({ _id: order._id, workspaceId: ws }).exec()

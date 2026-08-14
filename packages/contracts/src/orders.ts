@@ -44,9 +44,9 @@ export const statusHistoryEntry = z
 export const OrderDoc = z
   .object({
     workspaceId: objectIdString,
-    orderNumber: z.number().int().min(1), // unique with {workspaceId, orderYear}
-    orderYear: z.number().int().min(2020), // immutable — counter scope (DB-01)
-    orderCode: z.string().regex(/^ORD-\d{4}-\d{5}$/), // immutable, unique with workspaceId
+    orderNumber: z.number().int().min(1).nullish(), // set at T1 confirm (drafts: null)
+    orderYear: z.number().int().min(2020).nullish(), // immutable once set — counter scope (DB-01)
+    orderCode: z.string().regex(/^ORD-\d{4}-\d{5}$/).nullish(), // set at T1 confirm
     conversationId: objectIdString,
     customerId: objectIdString,
     items: z.array(orderItem).min(1),
@@ -65,6 +65,7 @@ export const OrderDoc = z
     paymentRef: z.string().nullish(),
     statusHistory: z.array(statusHistoryEntry).default([]), // append-only
     createdByType: z.enum(['ai', 'agent']),
+    draftLastTouchedAt: isoDate.nullish(), // abandonedOrderSweeper key (§11.2)
     confirmedAt: isoDate.nullish(),
     cancelledAt: isoDate.nullish(),
     cancellationReason: z.string().nullish(),

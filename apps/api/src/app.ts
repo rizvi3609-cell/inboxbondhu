@@ -5,7 +5,7 @@
 import express, { type Express } from 'express'
 import cookieParser from 'cookie-parser'
 import type { Redis } from 'ioredis'
-import type { CatalogueService, ChannelsService, DbClients, InboxService, KnowledgeService } from '@inboxbondhu/core'
+import type { CatalogueService, ChannelsService, DbClients, InboxService, KnowledgeService, OrdersService, PaymentsService } from '@inboxbondhu/core'
 import { healthCheck, IdentityService, WorkspaceService } from '@inboxbondhu/core'
 import {
   auth as authMiddleware, csrf as csrfMiddleware, tenant as tenantMiddleware,
@@ -16,6 +16,7 @@ import { workspacesRouter } from './routes/v1/workspaces.js'
 import { channelsRouter } from './routes/v1/channels.js'
 import { conversationsRouter, messagesRouter } from './routes/v1/conversations.js'
 import { importsRouter, knowledgeRouter, productsRouter } from './routes/v1/catalogue.js'
+import { ordersRouter, paymentsRouter } from './routes/v1/orders.js'
 import { metaWebhookRouter, type MetaWebhookDeps } from './routes/webhooks/meta.js'
 
 export interface AppDeps {
@@ -37,6 +38,8 @@ export interface AppDeps {
   channels?: { service: ChannelsService; metaAppId: string; apiUrl: string }
   /** Phase 4: inbox routes (#40–45). */
   inbox?: { service: InboxService }
+  /** Phase 7: orders + payments routes (#58–65). */
+  orders?: { orders: OrdersService; payments: PaymentsService }
   /** Phase 5: catalogue + knowledge routes (#46–57). */
   catalogue?: {
     catalogue: CatalogueService
@@ -151,6 +154,17 @@ export function createApp(deps: AppDeps): Express {
       }))
       app.use('/api/v1/w/:workspaceId/imports', ...chain, importsRouter({ catalogue: deps.catalogue.catalogue }))
       app.use('/api/v1/w/:workspaceId/knowledge', ...chain, knowledgeRouter({ knowledge: deps.catalogue.knowledge }))
+    }
+
+    // #58–65: /w/:workspaceId/{orders,payments}.
+    if (deps.orders) {
+      const chain = [
+        authMiddleware(deps.auth.jwtSecret, deps.auth.jwtSecretPrevious),
+        csrfMiddleware(),
+        tenantMiddleware(redis),
+      ] as const
+      app.use('/api/v1/w/:workspaceId/orders', ...chain, ordersRouter(deps.orders))
+      app.use('/api/v1/w/:workspaceId/payments', ...chain, paymentsRouter({ payments: deps.orders.payments }))
     }
 
     // #35–39: /w/:workspaceId/channels — behind auth+csrf+tenant like the rest.
