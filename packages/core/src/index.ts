@@ -7,6 +7,8 @@ export { DhakaTime, type BusinessDay } from './kernel/dhakaTime.js'
 export { Deadline } from './kernel/deadline.js'
 export { createEventBus, type EventBus, type DomainEvent, type EventHandler } from './kernel/eventBus.js'
 export * from './db/index.js'
+export * from './modules/identity/index.js'
+export * from './modules/workspace/index.js'
 export {
   bootDataLayer,
   shutdownDataLayer,

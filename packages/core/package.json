@@ -12,11 +12,16 @@
   "dependencies": {
     "@inboxbondhu/config": "workspace:*",
     "@inboxbondhu/contracts": "workspace:*",
+    "argon2": "^0.45.1",
     "ioredis": "^5.4.2",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.9.5",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/zxcvbn": "^4.4.5",
     "mongodb-memory-server": "^10.1.2"
   }
 }

@@ -30,7 +30,20 @@ async function main(): Promise<void> {
     process.exit(1)
   }
 
-  const app = createApp({ clients, version: VERSION, startedAt: Date.now() })
+  const app = createApp({
+    clients,
+    version: VERSION,
+    startedAt: Date.now(),
+    auth: {
+      jwtSecret: config.JWT_SECRET,
+      jwtSecretPrevious: config.JWT_SECRET_PREVIOUS || undefined,
+      pepper: config.PII_HASH_PEPPER,
+      accessTtlSeconds: 15 * 60,
+      refreshTtlDays: 30,
+      maxSessions: config.MAX_CONCURRENT_SESSIONS,
+      secureCookies: config.NODE_ENV === 'production',
+    },
+  })
   const server: Server = app.listen(config.PORT, '0.0.0.0', () => {
     log.info({ port: config.PORT }, 'api listening')
   })
