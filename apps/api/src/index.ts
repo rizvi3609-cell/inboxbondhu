@@ -64,11 +64,13 @@ async function main(): Promise<void> {
     clients,
     version: VERSION,
     startedAt: Date.now(),
+    // §8.1 items 2/3/6 — helmet + CSP nonce, cors(APP_URL), degradedMode.
+    security: { appUrl: config.APP_URL },
     webhook: {
       redis: clients.redis,
       appSecret: config.META_APP_SECRET,
       verifyToken: config.META_VERIFY_TOKEN,
-      journalDir: '/var/lib/inboxbondhu/journal', // D22
+      journalDir: config.JOURNAL_DIR, // D22
       enqueue: async (job) => {
         await webhookIngestQueue.add('webhook-ingest', job)
       },
@@ -88,7 +90,7 @@ async function main(): Promise<void> {
       observability: observabilityService,
       plans: plansService,
       queues: opsQueues,
-      ticketSecret: config.JWT_SECRET, // dedicated secret joins config in P9 hardening
+      ticketSecret: config.TICKET_SECRET || config.JWT_SECRET, // dedicated TICKET_SECRET (P9), JWT_SECRET fallback
     },
     catalogue: {
       catalogue: catalogueService,
@@ -101,7 +103,7 @@ async function main(): Promise<void> {
   const server: Server = app.listen(config.PORT, '0.0.0.0', () => {
     log.info({ port: config.PORT }, 'api listening')
   })
-  const realtime = createRealtimeGateway(server, clients.redis, config.JWT_SECRET)
+  const realtime = createRealtimeGateway(server, clients.redis, config.TICKET_SECRET || config.JWT_SECRET)
   void realtime // fan-out consumers arrive with the dispatcher wiring below
 
   // Graceful shutdown: stop accepting, drain in-flight, close connections.

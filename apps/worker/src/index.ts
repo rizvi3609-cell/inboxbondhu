@@ -6,11 +6,12 @@ import { Worker, Queue, type Processor } from 'bullmq'
 import { loadConfig } from '@inboxbondhu/config'
 import { createLogger } from '@inboxbondhu/logger'
 import {
-  bootDataLayer, drainRedisBuffer, makeKeyring, shutdownDataLayer,
+  bootDataLayer, drainRedisBuffer, drainJournal, makeKeyring, shutdownDataLayer,
   sweepAbandonedOrders, sweepExpiredReservations, sweepStuckMessages,
   dispatchOutboxBatch, purgeDispatchedOutbox, createMockEmailClient,
   reconcileUsage, reconcileStock, PlansService, ChannelConnection,
-  type DbClients,
+  runRetentionPurge, runEvalCanary, pickCanarySubset, mongoTextRetriever,
+  DhakaTime, Workspace, type CanaryCase, type DbClients,
 } from '@inboxbondhu/core'
 import { withJobLock } from './jobLock.js'
 import { createMockLlmClient, createMockMetaClient } from '@inboxbondhu/integrations'
@@ -205,14 +206,91 @@ async function main(): Promise<void> {
   }, 24 * 3_600_000)
   nightlyInterval.unref()
 
+  // webhookBufferDrainer — every 30 s: BOTH halves now (P9). Redis buffer
+  // first (Mongo-down events), then the D22 disk journal (Mongo+Redis-down
+  // events). I48 dedupe makes every replay safe.
+  const enqueueDrained = async (jobData: { dedupeKey: string; requestId: string }) => {
+    await queueByName.get('webhook-ingest')!.add('webhook-ingest', jobData as unknown as JobEnvelope)
+  }
   const drainerInterval = setInterval(() => {
-    void drainRedisBuffer(clients.redis, async (jobData) => {
-      await queueByName.get('webhook-ingest')!.add('webhook-ingest', jobData as unknown as JobEnvelope)
-    }).then(({ drained, deduped }) => {
-      if (drained > 0 || deduped > 0) log.info({ drained, deduped }, 'webhookBufferDrainer')
-    }).catch((err: Error) => log.warn({ err: err.message }, 'webhookBufferDrainer failed'))
+    void (async () => {
+      const redisHalf = await drainRedisBuffer(clients.redis, enqueueDrained)
+      const journalHalf = await drainJournal(config.JOURNAL_DIR, enqueueDrained)
+      const totals = {
+        drained: redisHalf.drained + journalHalf.drained,
+        deduped: redisHalf.deduped + journalHalf.deduped,
+        journalCorrupt: journalHalf.failed,
+      }
+      if (totals.drained > 0 || totals.deduped > 0 || totals.journalCorrupt > 0) {
+        log.info(totals, 'webhookBufferDrainer')
+      }
+    })().catch((err: Error) => log.warn({ err: err.message }, 'webhookBufferDrainer failed'))
   }, 30_000)
   drainerInterval.unref()
+
+  // ── Dhaka-clock daily jobs (§13.2 rows 8–9) ────────────────────────────────
+  // Fired from a minute-resolution scheduler: run when the Dhaka wall clock
+  // crosses the target hour and the job hasn't run this Dhaka day (the Redis
+  // job lock's TTL doubles as the once-per-day guard across workers).
+  const dailyAt = (hourDhaka: number, job: string, ttlMs: number, body: () => Promise<unknown>) => {
+    const tick = () => {
+      void (async () => {
+        const now = new Date()
+        const sinceMidnight = now.getTime() - DhakaTime.startOfDhakaDay(now).getTime()
+        const hour = Math.floor(sinceMidnight / 3_600_000)
+        if (hour !== hourDhaka) return
+        // Once-per-Dhaka-day marker (survives the lock's release), THEN the
+        // §13.2 job lock for cross-worker single-flight during the run.
+        const dayKey = `done:${job}:${DhakaTime.startOfDhakaDay(now).toISOString().slice(0, 10)}`
+        const fresh = await clients.redis.set(dayKey, '1', 'EX', 90_000, 'NX')
+        if (fresh !== 'OK') return // already ran today (any worker)
+        const r = await withJobLock(clients.redis, job, ttlMs, body)
+        if (r !== null) log.info({ job, result: r }, 'daily sweeper ran')
+        else await clients.redis.del(dayKey) // lost the lock race — let the holder's marker stand
+      })().catch((err: Error) => log.warn({ job, err: err.message }, 'daily sweeper failed'))
+    }
+    const interval = setInterval(tick, 60_000)
+    interval.unref()
+    return interval
+  }
+
+  // retentionPurger — daily 03:00 Dhaka (§13.2): resumable 90-day cascade
+  // delete/anonymise past purgeAfter. Lock TTL ≈ the whole Dhaka hour so a
+  // second worker can NEVER double-run it within the window (P-11 batches
+  // are idempotent anyway — the lock is belt AND braces).
+  dailyAt(3, 'retentionPurger', 3_600_000, async () => {
+    const report = await runRetentionPurge()
+    if (report.batches > 0) log.info(report, 'retentionPurger report')
+    return report
+  })
+
+  // evalCanary — daily 04:00 Dhaka (§13.2): 20-case subset against the
+  // production prompt version; ANY failure alerts (P-10 / §15.5).
+  dailyAt(4, 'evalCanary', 3_600_000, async () => {
+    const { readFileSync } = await import('node:fs')
+    const { fileURLToPath } = await import('node:url')
+    const { dirname, join } = await import('node:path')
+    const here = dirname(fileURLToPath(import.meta.url))
+    const corpusPath = join(here, '..', '..', '..', 'evals', 'banglish-corpus.jsonl')
+    const corpus: CanaryCase[] = readFileSync(corpusPath, 'utf8')
+      .split('\n').filter((l) => l.trim())
+      .map((l) => JSON.parse(l) as CanaryCase)
+    const subset = pickCanarySubset(corpus, 20)
+    // Canary workspace: the first active one — retrieval needs a real
+    // catalogue. OPEN QUESTION: the spec does not name the canary tenant;
+    // a dedicated synthetic workspace is the P10 recommendation.
+    const ws = await Workspace.findOne({ status: 'active' }).exec()
+    if (!ws) return { skipped: 'no active workspace' }
+    const result = await runEvalCanary(String(ws._id), subset, {
+      llm: llmClient,
+      retriever: mongoTextRetriever,
+      promptVersion: config.PROMPT_VERSION,
+    })
+    if (result.failures.length > 0) {
+      log.error({ ...result }, 'ALERT ai.canary_failed — prompt/pipeline regression in production')
+    }
+    return result
+  })
 
   log.info({ queues: QUEUE_SPECS.map((q) => q.name) }, 'worker ready')
 

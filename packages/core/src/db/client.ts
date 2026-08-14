@@ -44,16 +44,32 @@ export interface HealthReport {
 }
 
 export async function healthCheck(clients: DbClients): Promise<HealthReport> {
+  // §14.1: /readyz must answer PROMPTLY when a dependency is down — the LB
+  // needs the 503 in milliseconds, not after the driver's 30 s server
+  // selection. readyState !== 1 short-circuits; a live ping gets a 2 s cap.
+  const withTimeout = <T>(p: Promise<T>, fallback: T, ms = 2000): Promise<T> =>
+    Promise.race([p, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms).unref())])
+
+  const mongoPing =
+    clients.mongoose.connection.readyState !== 1
+      ? Promise.resolve(false)
+      : withTimeout(
+          clients.mongoose.connection.db
+            ?.admin()
+            .ping()
+            .then(() => true)
+            .catch(() => false) ?? Promise.resolve(false),
+          false,
+        )
   const [mongo, redis] = await Promise.all([
-    clients.mongoose.connection.db
-      ?.admin()
-      .ping()
-      .then(() => true)
-      .catch(() => false) ?? Promise.resolve(false),
-    clients.redis
-      .ping()
-      .then((r) => r === 'PONG')
-      .catch(() => false),
+    mongoPing,
+    withTimeout(
+      clients.redis
+        .ping()
+        .then((r) => r === 'PONG')
+        .catch(() => false),
+      false,
+    ),
   ])
   return { mongo, redis }
 }

@@ -3,3 +3,4 @@ export { mongoTextRetriever, type Retriever, type RetrievedDoc } from './retriev
 export { assemblePrompt, preclassifyIntent, PROMPT_VERSION_BUILTIN, type PromptContext } from './prompt.js'
 export { verifyGrounding, extractNumbers, type GroundingResult } from './grounding.js'
 export { runAiPipeline, type AiPipelineDeps, type AiPipelineResult } from './pipeline.js'
+export { pickCanarySubset, runEvalCanary, type CanaryCase, type CanaryResult } from './canary.js'

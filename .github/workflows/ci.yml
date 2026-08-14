@@ -60,3 +60,6 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Build dashboard (Next.js 15 — P9)
+        run: pnpm build:web

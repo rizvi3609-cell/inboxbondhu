@@ -2,5 +2,21 @@
   "name": "@inboxbondhu/web",
   "version": "0.1.0",
   "private": true,
-  "description": "Placeholder until Phase 9 — no dashboard work before the backend is provable by curl (prompt.md guardrail #1)."
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "socket.io-client": "^4.8.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.5.4"
+  }
 }

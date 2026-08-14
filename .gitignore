@@ -5,3 +5,5 @@ dist/
 .env.boot
 .env
 .env.local
+.next/
+.restore-drill/

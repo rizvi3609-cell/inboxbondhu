@@ -11,6 +11,9 @@ function fakeClients(mongoUp: boolean, redisUp: boolean): DbClients {
   return {
     mongoose: {
       connection: {
+        // healthCheck short-circuits on readyState (P9 §14.1 fast-503);
+        // model a connected driver whose ping reflects mongoUp.
+        readyState: mongoUp ? 1 : 0,
         db: {
           admin: () => ({
             ping: () => (mongoUp ? Promise.resolve({ ok: 1 }) : Promise.reject(new Error('down'))),

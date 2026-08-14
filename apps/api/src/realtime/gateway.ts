@@ -50,8 +50,11 @@ export function createRealtimeGateway(
   redis: Redis,
   ticketSecret: string,
 ): RealtimeGateway {
-  const pub = redis.duplicate()
-  const sub = redis.duplicate()
+  // The adapter psubscribes immediately, before the duplicates finish their
+  // handshake — they need the offline queue even when the boot client (which
+  // must fail fast, INV-11) disables it.
+  const pub = redis.duplicate({ enableOfflineQueue: true })
+  const sub = redis.duplicate({ enableOfflineQueue: true })
   const io = new SocketIoServer(httpServer, {
     path: '/realtime',
     adapter: createAdapter(pub, sub), // second API instance works unchanged

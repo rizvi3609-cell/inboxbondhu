@@ -9,7 +9,7 @@ import moduleBoundaries from './tools/eslint-rules/module-boundaries.mjs'
 
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/node_modules/**', '**/*.d.ts', '**/generated/**'],
+    ignores: ['**/dist/**', '**/node_modules/**', '**/*.d.ts', '**/generated/**', '**/.next/**', '**/next-env.d.ts'],
   },
   ...tseslint.configs.recommended,
   {

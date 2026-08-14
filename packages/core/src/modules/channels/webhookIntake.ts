@@ -10,7 +10,7 @@
  * Mongo down → Redis buffer, 200. Redis ALSO down → D22 disk journal, 200.
  * NEVER a non-2xx to Meta for an internal fault.
  */
-import { appendFileSync, mkdirSync } from 'node:fs'
+import { appendFileSync, mkdirSync, readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import type { Redis } from 'ioredis'
@@ -273,6 +273,112 @@ export async function drainRedisBuffer(
     }
   }
   return { drained, deduped }
+}
+
+/**
+ * The journal half of webhookBufferDrainer (P9): replay D22 ndjson files into
+ * webhookEvents once Mongo returns. Resumable and idempotent:
+ *   - a file is processed line-by-line; on a mid-file Mongo failure the
+ *     UNPROCESSED remainder is rewritten to the file and the drain stops;
+ *   - fully drained files are deleted;
+ *   - I48 (unique dedupeKey) makes every replay safe — E11000 = deduped.
+ * The `.draining` rename makes the per-file claim atomic: a concurrent intake
+ * append simply recreates a fresh date-file, so no line is ever lost.
+ */
+export async function drainJournal(
+  journalDir: string,
+  enqueue: (job: { dedupeKey: string; requestId: string }) => Promise<void>,
+  maxLines = 5000,
+): Promise<{ drained: number; deduped: number; failed: number }> {
+  let drained = 0
+  let deduped = 0
+  let failed = 0
+  if (!mongoAvailable()) return { drained, deduped, failed }
+
+  let files: string[]
+  try {
+    files = readdirSync(journalDir)
+      .filter((f) => f.endsWith('.ndjson') || f.endsWith('.ndjson.draining'))
+      .sort() // date-named files → receipt order across days
+  } catch {
+    return { drained, deduped, failed } // no journal dir — nothing buffered
+  }
+
+  let budget = maxLines
+  for (const file of files) {
+    if (budget <= 0) break
+    const path = join(journalDir, file)
+    // Claim: rename to .draining so a concurrent appender starts a fresh file.
+    let claimed = path
+    if (!file.endsWith('.draining')) {
+      claimed = `${path}.draining`
+      try {
+        renameSync(path, claimed)
+      } catch {
+        continue // another drainer claimed it
+      }
+    }
+
+    let lines: string[]
+    try {
+      lines = readFileSync(claimed, 'utf8').split('\n').filter((l) => l.trim())
+    } catch {
+      continue
+    }
+
+    let stoppedAt = -1 // first UNPROCESSED index when we halt early
+    let i = 0
+    for (; i < lines.length; i += 1) {
+      if (budget <= 0) {
+        stoppedAt = i // budget exhausted mid-file — keep the tail
+        break
+      }
+      budget -= 1
+      let evt: {
+        dedupeKey: string; provider: 'facebook' | 'instagram'; externalPageId: string
+        entry: Record<string, unknown>; receivedAt: string; requestId: string
+      }
+      try {
+        evt = JSON.parse(lines[i]!) as typeof evt
+      } catch {
+        failed += 1 // corrupt line — count it, never let it wedge the drain
+        continue
+      }
+      try {
+        await WebhookEvent.create({
+          provider: evt.provider,
+          externalPageId: evt.externalPageId,
+          dedupeKey: evt.dedupeKey,
+          signatureValid: true, // only verified events reach the journal
+          rawPayload: evt.entry,
+          receivedAt: new Date(evt.receivedAt),
+          processStatus: 'pending',
+          expiresAt: new Date(new Date(evt.receivedAt).getTime() + 7 * DAY_S * 1000),
+        })
+        drained += 1
+        await enqueue({ dedupeKey: evt.dedupeKey, requestId: evt.requestId }).catch(() => undefined)
+      } catch (err) {
+        if ((err as { code?: number }).code === 11000) {
+          deduped += 1 // I48 — replay-safe by design
+          continue
+        }
+        stoppedAt = i // Mongo gone again mid-drain — keep the remainder
+        break
+      }
+    }
+
+    if (stoppedAt >= 0) {
+      // Resumable: rewrite ONLY the unprocessed tail, stop draining.
+      writeFileSync(claimed, lines.slice(stoppedAt).join('\n') + '\n')
+      break
+    }
+    try {
+      unlinkSync(claimed) // fully drained
+    } catch {
+      /* already gone */
+    }
+  }
+  return { drained, deduped, failed }
 }
 
 export { BUFFER_KEY }

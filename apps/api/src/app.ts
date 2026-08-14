@@ -4,6 +4,7 @@
  */
 import express, { type Express } from 'express'
 import cookieParser from 'cookie-parser'
+import mongoose from 'mongoose'
 import type { Redis } from 'ioredis'
 import type { CatalogueService, ChannelsService, DbClients, InboxService, KnowledgeService, ObservabilityService, OrdersService, PaymentsService, PlansService } from '@inboxbondhu/core'
 import { healthCheck, IdentityService, WorkspaceService } from '@inboxbondhu/core'
@@ -11,6 +12,7 @@ import {
   auth as authMiddleware, csrf as csrfMiddleware, tenant as tenantMiddleware,
   errorHandler, membershipCacheInvalidator, requestId,
 } from './middleware/core.js'
+import { cors, degradedMode, securityHeaders } from './middleware/security.js'
 import { authRouter, meRouter } from './routes/v1/auth.js'
 import { workspacesRouter } from './routes/v1/workspaces.js'
 import { channelsRouter } from './routes/v1/channels.js'
@@ -25,6 +27,8 @@ export interface AppDeps {
   clients: DbClients | null // null in unit tests that only hit /healthz
   version: string
   startedAt: number
+  /** P9 §8.1 items 2/3/6: helmet+CSP nonce, cors(APP_URL), degradedMode. */
+  security?: { appUrl: string; wssOrigin?: string }
   auth?: {
     jwtSecret: string
     jwtSecretPrevious?: string
@@ -69,14 +73,24 @@ export function createApp(deps: AppDeps): Express {
     app.use('/webhooks', metaWebhookRouter(deps.webhook))
   }
 
+  // §8.1 items 2 + 3 (P9): helmet + per-request CSP nonce, then cors(APP_URL).
+  // Mounted AFTER the webhook (which stays requestId + raw body only).
+  if (deps.security) {
+    app.use(securityHeaders({ ...(deps.security.wssOrigin ? { wssOrigin: deps.security.wssOrigin } : {}) }))
+    app.use(cors(deps.security.appUrl))
+  }
+
   app.use(express.json({ limit: '256kb' }))
   app.use(cookieParser())
 
-  // Liveness: process is up. Never touches a dependency.
+  // Liveness: process is up. Never touches a dependency synchronously.
+  // §14.1: when Mongo is down /healthz still answers 200 with degraded: true.
   app.get('/healthz', (_req, res) => {
+    const degraded = deps.clients !== null && mongoose.connection.readyState !== 1
     res.status(200).json({
       data: {
         status: 'ok',
+        degraded,
         version: deps.version,
         uptimeSeconds: Math.floor((Date.now() - deps.startedAt) / 1000),
       },
@@ -100,6 +114,13 @@ export function createApp(deps: AppDeps): Express {
       }
     })()
   })
+
+  // §8.1 item 6 (P9): degraded mode — Mongo down ⇒ everything below answers
+  // 503 DEGRADED_MODE instantly. The webhook, /healthz and /readyz sit ABOVE
+  // this line (§14.1's allowlist). Applied only when a data layer exists.
+  if (deps.clients) {
+    app.use(degradedMode())
+  }
 
   // Phase 2 routes — only when auth config is provided.
   if (deps.auth) {

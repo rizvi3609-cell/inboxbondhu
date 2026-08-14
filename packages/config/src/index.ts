@@ -24,6 +24,8 @@ export const EnvSchema = z.object({
   // Auth
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be ≥ 32 chars (256-bit)'),
   JWT_SECRET_PREVIOUS: z.string().default(''),
+  /** Realtime ticket HMAC secret (P9). Empty ⇒ fall back to JWT_SECRET. */
+  TICKET_SECRET: z.string().default(''),
   ACCESS_TOKEN_TTL: z.string().regex(durationRe).default('15m'),
   REFRESH_TOKEN_TTL: z.string().regex(durationRe).default('30d'),
   MAX_CONCURRENT_SESSIONS: z.coerce.number().int().min(1).default(5),
@@ -66,6 +68,10 @@ export const EnvSchema = z.object({
   DD_API_KEY: z.string().default(''),
   DD_SITE: z.string().default('datadoghq.com'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+
+  // Resilience (P9)
+  /** D22 last-resort disk journal for webhook intake when Mongo AND Redis are down. */
+  JOURNAL_DIR: z.string().default('/var/lib/inboxbondhu/journal'),
 
   // Business rules
   DEFAULT_TIMEZONE: z.literal('Asia/Dhaka').default('Asia/Dhaka'),
