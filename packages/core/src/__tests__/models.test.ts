@@ -6,7 +6,6 @@
  * - unique indexes behave (I18 global, I21 3-field, I29 partial-unique, I48 global)
  */
 import { beforeAll, afterAll, beforeEach, describe, expect, it } from 'vitest'
-import mongoose from 'mongoose'
 import {
   AuditLog, ChannelConnection, Conversation, Customer, Import, Invitation, KnowledgeItem,
   Membership, Message, Order, OrderCounter, OutboxEvent, Product, Session, StockReservation,

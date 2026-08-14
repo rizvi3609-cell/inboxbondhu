@@ -1,4 +1,5 @@
 import mongoose, { Schema, type InferSchemaType } from 'mongoose'
+import { Money } from '../../kernel/money.js'
 import { moneyPlugin } from '../plugins/money.js'
 import { occPlugin } from '../plugins/occ.js'
 import { tenancyPlugin } from '../plugins/tenancy.js'
@@ -98,8 +99,8 @@ orderSchema.plugin(occPlugin)
 orderSchema.plugin(moneyPlugin)
 
 /**
- * INV-04: the server calculates all totals. Integer maths only; discount FLOORS.
- * Idempotent: calling twice changes nothing.
+ * INV-04: the server calculates all totals — via the Money kernel primitive
+ * (agent.md §6.3), never raw arithmetic. Discount FLOORS. Idempotent.
  */
 orderSchema.methods['recalculate'] = function (this: {
   items: { quantity: number; unitPriceMinor: number; lineTotalMinor: number }[]
@@ -109,13 +110,14 @@ orderSchema.methods['recalculate'] = function (this: {
   deliveryFeeMinor: number
   totalMinor: number
 }): void {
+  let subtotal = Money.of(0)
   for (const item of this.items) {
-    item.lineTotalMinor = item.quantity * item.unitPriceMinor
+    item.lineTotalMinor = Money.mulQty(item.unitPriceMinor, item.quantity)
+    subtotal = Money.add(subtotal, item.lineTotalMinor)
   }
-  this.subtotalMinor = this.items.reduce((sum, i) => sum + i.lineTotalMinor, 0)
-  const pct = this.discountPercent ?? 0
-  this.discountMinor = Math.floor((this.subtotalMinor * pct) / 100) // floor, never round
-  this.totalMinor = this.subtotalMinor - this.discountMinor + this.deliveryFeeMinor
+  this.subtotalMinor = subtotal
+  this.discountMinor = Money.floorPercent(subtotal, this.discountPercent ?? 0)
+  this.totalMinor = Money.add(Money.sub(subtotal, this.discountMinor), this.deliveryFeeMinor)
 }
 
 orderSchema.index({ workspaceId: 1, orderYear: 1, orderNumber: 1 }, { unique: true, name: 'I38' })

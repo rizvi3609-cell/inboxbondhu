@@ -2,6 +2,7 @@
  * Phase 1 DoD: "seed script runs clean twice in a row."
  * Runs the exported runSeed() in-process against a dedicated replica set.
  */
+import { mkdirSync } from 'node:fs'
 import { beforeAll, afterAll, describe, expect, it } from 'vitest'
 import mongoose from 'mongoose'
 import { MongoMemoryReplSet } from 'mongodb-memory-server'
@@ -10,7 +11,9 @@ import { runSeed } from '../db/seed.js'
 let replSet: MongoMemoryReplSet
 
 beforeAll(async () => {
-  process.env['TMPDIR'] = process.env['TMPDIR'] ?? `${process.env['HOME'] ?? '/tmp'}/.cache/mongoms-data`
+  const dataDir = process.env['TMPDIR'] ?? `${process.env['HOME'] ?? '/tmp'}/.cache/mongoms-data`
+  mkdirSync(dataDir, { recursive: true })
+  process.env['TMPDIR'] = dataDir
   replSet = await MongoMemoryReplSet.create({ replSet: { count: 1 } })
 }, 300_000)
 

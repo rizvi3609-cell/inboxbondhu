@@ -1,0 +1,6 @@
+{
+  "name": "@inboxbondhu/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Placeholder until Phase 9 — no dashboard work before the backend is provable by curl (prompt.md guardrail #1)."
+}

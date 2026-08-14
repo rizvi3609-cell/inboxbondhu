@@ -15,8 +15,7 @@ export async function withTx<T>(
 ): Promise<T> {
   const maxRetries = opts.maxRetries ?? 3
   let attempt = 0
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
+  for (;;) {
     const session = await mongoose.startSession()
     try {
       let result!: T

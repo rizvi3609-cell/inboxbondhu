@@ -4,17 +4,23 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc -b packages/contracts packages/core",
+    "dev": "turbo run dev --parallel",
+    "lint": "eslint .",
+    "typecheck": "tsc -p packages/contracts/tsconfig.json && tsc -p packages/config/tsconfig.json && tsc -p packages/logger/tsconfig.json && tsc -p packages/core/tsconfig.json && tsc -p apps/api/tsconfig.json && tsc -p apps/worker/tsconfig.json",
     "test": "vitest run",
+    "build": "pnpm typecheck",
     "seed": "tsx packages/core/src/db/seed.ts",
     "jsonschema:generate": "tsx packages/core/src/db/jsonSchema/generate.ts",
     "jsonschema:check": "tsx packages/core/src/db/jsonSchema/generate.ts --check"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
+    "eslint": "^9.17.0",
     "mongodb-memory-server": "^10.1.2",
     "tsx": "^4.19.0",
+    "turbo": "^2.3.3",
     "typescript": "^5.5.4",
+    "typescript-eslint": "^8.19.0",
     "vitest": "^2.1.8"
   }
 }

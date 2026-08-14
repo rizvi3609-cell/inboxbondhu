@@ -1,0 +1,62 @@
+# CI — Phase 0 item 8: lint → typecheck → test → build.
+# Includes the §5.7 $jsonSchema drift gate and the §15.4 PII log scan.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint (module boundaries + tenant filters + no any/ts-ignore)
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: jsonSchema drift gate (§5.7 — generated, never hand-written)
+        run: pnpm jsonschema:check
+
+      - name: Test (mongodb-memory-server replica set; real Redis service)
+        run: pnpm test 2>&1 | tee test-output.log
+        env:
+          REDIS_URL: redis://127.0.0.1:6379
+
+      - name: PII log scan (§15.4 — fails on phone-shaped strings in test logs)
+        run: |
+          if grep -E '01[3-9][0-9]{8}' test-output.log | grep -v 'REDACTED' | grep -vE '^\s*(✓|×|❯|›|·)' | grep -q .; then
+            echo '::error::BD-phone-shaped string found unredacted in test log output'
+            grep -nE '01[3-9][0-9]{8}' test-output.log | grep -v 'REDACTED' | head
+            exit 1
+          fi
+          echo "PII scan clean"
+
+      - name: Build
+        run: pnpm build

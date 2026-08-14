@@ -1,3 +1,4 @@
+import { mkdirSync } from 'node:fs'
 import { MongoMemoryReplSet } from 'mongodb-memory-server'
 import mongoose from 'mongoose'
 
@@ -16,7 +17,9 @@ process.once('exit', () => {
 export async function startDb(): Promise<void> {
   if (!replSet) {
     // Keep mongod data dirs off the small tmpfs — CI boxes have tiny /tmp.
-    process.env['TMPDIR'] = process.env['TMPDIR'] ?? `${process.env['HOME'] ?? '/tmp'}/.cache/mongoms-data`
+    const dataDir = process.env['TMPDIR'] ?? `${process.env['HOME'] ?? '/tmp'}/.cache/mongoms-data`
+    mkdirSync(dataDir, { recursive: true })
+    process.env['TMPDIR'] = dataDir
     replSet = await MongoMemoryReplSet.create({ replSet: { count: 1 } })
   }
   // isolate:false shares the process across files; another suite may have

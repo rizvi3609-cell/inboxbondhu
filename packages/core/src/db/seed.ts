@@ -287,13 +287,12 @@ export async function runSeed(uri: string): Promise<{
 }
 
 // CLI entry: `pnpm seed` / `tsx packages/core/src/db/seed.ts`
+// Env access goes through packages/config (agent.md §4.1) — the Phase 1
+// OPEN QUESTION about direct process.env access is now resolved.
 const isMain = process.argv[1]?.endsWith('seed.ts') ?? false
 if (isMain) {
-  // OPEN QUESTION: seeding reads MONGODB_URI directly because packages/config
-  // is a Phase 0 artefact not present in this repo slice — narrow fallback
-  // pending the config loader.
-  const uri = process.env['MONGODB_URI'] ?? 'mongodb://127.0.0.1:27017/inboxbondhu'
-  runSeed(uri).catch((err) => {
+  const { loadSeedConfig } = await import('@inboxbondhu/config')
+  runSeed(loadSeedConfig().MONGODB_URI).catch((err) => {
     console.error('seed failed:', err)
     process.exitCode = 1
   })

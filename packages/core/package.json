@@ -10,7 +10,9 @@
     "./db": "./src/db/index.ts"
   },
   "dependencies": {
+    "@inboxbondhu/config": "workspace:*",
     "@inboxbondhu/contracts": "workspace:*",
+    "ioredis": "^5.4.2",
     "mongoose": "^8.9.5",
     "zod": "^3.23.8"
   },

@@ -1,0 +1,22 @@
+{
+  "name": "@inboxbondhu/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@inboxbondhu/config": "workspace:*",
+    "@inboxbondhu/core": "workspace:*",
+    "@inboxbondhu/logger": "workspace:*",
+    "express": "^5.0.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "supertest": "^7.0.0",
+    "@types/supertest": "^6.0.2",
+    "tsx": "^4.19.0"
+  }
+}
