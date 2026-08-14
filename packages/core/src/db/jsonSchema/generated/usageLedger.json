@@ -1,0 +1,79 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "workspaceId": {
+        "bsonType": "objectId"
+      },
+      "periodKey": {
+        "bsonType": "string",
+        "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+      },
+      "plan": {
+        "enum": [
+          "trial",
+          "starter",
+          "growth"
+        ]
+      },
+      "conversationsUsed": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "conversationsLimit": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "productsCount": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "aiRepliesGenerated": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "aiCostMinor": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "messagesSent": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "warningsSentAt": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "date"
+        }
+      },
+      "reconciledAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      }
+    }
+  }
+}

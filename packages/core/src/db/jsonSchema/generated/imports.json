@@ -1,0 +1,114 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "workspaceId": {
+        "bsonType": "objectId"
+      },
+      "type": {
+        "enum": [
+          "products_csv"
+        ]
+      },
+      "fileName": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "spacesKey": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "totalRows": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "lastProcessedRow": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "successCount": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "failureCount": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "errors": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "row": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            },
+            "column": {
+              "bsonType": "string"
+            },
+            "code": {
+              "bsonType": "string"
+            },
+            "message": {
+              "bsonType": "string"
+            }
+          },
+          "required": [
+            "row",
+            "column",
+            "code",
+            "message"
+          ]
+        },
+        "maxItems": 500
+      },
+      "status": {
+        "enum": [
+          "pending",
+          "processing",
+          "completed",
+          "failed",
+          "cancelled"
+        ]
+      },
+      "startedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "completedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "createdBy": {
+        "bsonType": "objectId"
+      }
+    }
+  }
+}

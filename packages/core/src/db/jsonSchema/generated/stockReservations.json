@@ -1,0 +1,57 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "workspaceId": {
+        "bsonType": "objectId"
+      },
+      "orderId": {
+        "bsonType": "objectId"
+      },
+      "productId": {
+        "bsonType": "objectId"
+      },
+      "variantSku": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "qty": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 1
+      },
+      "status": {
+        "enum": [
+          "held",
+          "committed",
+          "released"
+        ]
+      },
+      "expiresAt": {
+        "bsonType": "date"
+      },
+      "releasedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "committedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      }
+    }
+  }
+}

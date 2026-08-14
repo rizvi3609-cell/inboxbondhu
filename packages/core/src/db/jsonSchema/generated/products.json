@@ -1,0 +1,232 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "workspaceId": {
+        "bsonType": "objectId"
+      },
+      "sku": {
+        "bsonType": "string",
+        "minLength": 1,
+        "pattern": "^[A-Z0-9_-]+$"
+      },
+      "name": {
+        "bsonType": "string",
+        "minLength": 2,
+        "maxLength": 200
+      },
+      "description": {
+        "anyOf": [
+          {
+            "bsonType": "string",
+            "maxLength": 4000
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "category": {
+        "anyOf": [
+          {
+            "bsonType": "string"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "basePriceMinor": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "compareAtPriceMinor": {
+        "anyOf": [
+          {
+            "bsonType": [
+              "int",
+              "long"
+            ],
+            "minimum": 0
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "variants": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "sku": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "name": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "attributes": {
+              "anyOf": [
+                {
+                  "bsonType": "object",
+                  "properties": {
+                    "color": {
+                      "anyOf": [
+                        {
+                          "bsonType": "string"
+                        },
+                        {
+                          "bsonType": "null"
+                        }
+                      ]
+                    },
+                    "size": {
+                      "anyOf": [
+                        {
+                          "bsonType": "string"
+                        },
+                        {
+                          "bsonType": "null"
+                        }
+                      ]
+                    },
+                    "material": {
+                      "anyOf": [
+                        {
+                          "bsonType": "string"
+                        },
+                        {
+                          "bsonType": "null"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "bsonType": "null"
+                }
+              ]
+            },
+            "priceMinor": {
+              "anyOf": [
+                {
+                  "bsonType": [
+                    "int",
+                    "long"
+                  ],
+                  "minimum": 0
+                },
+                {
+                  "bsonType": "null"
+                }
+              ]
+            },
+            "stock": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            },
+            "reserved": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            },
+            "lowStockThreshold": {
+              "anyOf": [
+                {
+                  "bsonType": [
+                    "int",
+                    "long"
+                  ],
+                  "minimum": 0
+                },
+                {
+                  "bsonType": "null"
+                }
+              ]
+            },
+            "isActive": {
+              "bsonType": "bool"
+            }
+          },
+          "required": [
+            "sku",
+            "name",
+            "stock"
+          ]
+        },
+        "minItems": 1
+      },
+      "images": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "spacesKey": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "alt": {
+              "anyOf": [
+                {
+                  "bsonType": "string"
+                },
+                {
+                  "bsonType": "null"
+                }
+              ]
+            },
+            "position": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            }
+          },
+          "required": [
+            "spacesKey",
+            "position"
+          ]
+        },
+        "maxItems": 10
+      },
+      "status": {
+        "enum": [
+          "active",
+          "draft",
+          "archived"
+        ]
+      },
+      "searchText": {
+        "bsonType": "string"
+      },
+      "importId": {
+        "anyOf": [
+          {
+            "bsonType": "objectId"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "version": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      }
+    }
+  }
+}

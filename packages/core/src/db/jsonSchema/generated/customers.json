@@ -1,0 +1,124 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "workspaceId": {
+        "bsonType": "objectId"
+      },
+      "provider": {
+        "enum": [
+          "facebook",
+          "instagram"
+        ]
+      },
+      "externalUserId": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "displayName": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "profilePicUrl": {
+        "anyOf": [
+          {
+            "bsonType": "string"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "phone": {
+        "anyOf": [
+          {
+            "bsonType": "string",
+            "pattern": "^01[3-9]\\d{8}$"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "phoneHash": {
+        "anyOf": [
+          {
+            "bsonType": "string"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "addressText": {
+        "anyOf": [
+          {
+            "bsonType": "string",
+            "maxLength": 500
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "deliveryZone": {
+        "anyOf": [
+          {
+            "bsonType": "string"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "tags": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "string"
+        },
+        "maxItems": 20
+      },
+      "notes": {
+        "anyOf": [
+          {
+            "bsonType": "string",
+            "maxLength": 2000
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "orderCount": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "totalSpentMinor": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "firstSeenAt": {
+        "bsonType": "date"
+      },
+      "lastSeenAt": {
+        "bsonType": "date"
+      },
+      "anonymizedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      }
+    }
+  }
+}

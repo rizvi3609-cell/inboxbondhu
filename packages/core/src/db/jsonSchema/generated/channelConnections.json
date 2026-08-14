@@ -1,0 +1,100 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "workspaceId": {
+        "bsonType": "objectId"
+      },
+      "provider": {
+        "enum": [
+          "facebook",
+          "instagram"
+        ]
+      },
+      "externalPageId": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "pageName": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "accessTokenCipher": {
+        "bsonType": "string"
+      },
+      "accessTokenIv": {
+        "bsonType": "string"
+      },
+      "accessTokenTag": {
+        "bsonType": "string"
+      },
+      "keyVersion": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 1
+      },
+      "tokenExpiresAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "scopes": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "string"
+        }
+      },
+      "status": {
+        "enum": [
+          "active",
+          "expired",
+          "revoked",
+          "error"
+        ]
+      },
+      "lastErrorCode": {
+        "anyOf": [
+          {
+            "bsonType": "string"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "lastErrorAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "subscribedFields": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "string"
+        }
+      },
+      "connectedBy": {
+        "bsonType": "objectId"
+      },
+      "version": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      }
+    }
+  }
+}

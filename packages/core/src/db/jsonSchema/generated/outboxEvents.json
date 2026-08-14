@@ -1,0 +1,59 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "workspaceId": {
+        "bsonType": "objectId"
+      },
+      "type": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "payload": {
+        "bsonType": "object"
+      },
+      "idempotencyKey": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "status": {
+        "enum": [
+          "pending",
+          "dispatched",
+          "failed",
+          "dead"
+        ]
+      },
+      "attempts": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "nextAttemptAt": {
+        "bsonType": "date"
+      },
+      "dispatchedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "lastError": {
+        "anyOf": [
+          {
+            "bsonType": "string"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,324 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "workspaceId": {
+        "bsonType": "objectId"
+      },
+      "conversationId": {
+        "bsonType": "objectId"
+      },
+      "direction": {
+        "enum": [
+          "inbound",
+          "outbound"
+        ]
+      },
+      "author": {
+        "bsonType": "object",
+        "properties": {
+          "type": {
+            "enum": [
+              "customer",
+              "ai",
+              "agent",
+              "system"
+            ]
+          },
+          "userId": {
+            "anyOf": [
+              {
+                "bsonType": "objectId"
+              },
+              {
+                "bsonType": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "contentType": {
+        "enum": [
+          "text",
+          "image",
+          "audio",
+          "video",
+          "file",
+          "template",
+          "postback"
+        ]
+      },
+      "text": {
+        "anyOf": [
+          {
+            "bsonType": "string",
+            "maxLength": 4000
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "attachments": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "type": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "spacesKey": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "mimeType": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "sizeBytes": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            },
+            "width": {
+              "anyOf": [
+                {
+                  "bsonType": [
+                    "int",
+                    "long"
+                  ],
+                  "minimum": 0
+                },
+                {
+                  "bsonType": "null"
+                }
+              ]
+            },
+            "height": {
+              "anyOf": [
+                {
+                  "bsonType": [
+                    "int",
+                    "long"
+                  ],
+                  "minimum": 0
+                },
+                {
+                  "bsonType": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "spacesKey",
+            "mimeType",
+            "sizeBytes"
+          ]
+        }
+      },
+      "providerMessageId": {
+        "anyOf": [
+          {
+            "bsonType": "string"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "status": {
+        "enum": [
+          "queued",
+          "sent",
+          "delivered",
+          "read",
+          "failed"
+        ]
+      },
+      "failureCode": {
+        "anyOf": [
+          {
+            "bsonType": "string"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "failureDetail": {
+        "anyOf": [
+          {
+            "bsonType": "string"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "sentAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "deliveredAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "readAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "aiMeta": {
+        "anyOf": [
+          {
+            "bsonType": "object",
+            "properties": {
+              "intent": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "greeting",
+                      "product_search",
+                      "price_question",
+                      "availability_question",
+                      "delivery_question",
+                      "size_or_color_question",
+                      "order_start",
+                      "provide_customer_detail",
+                      "order_confirmation",
+                      "payment_question",
+                      "complaint",
+                      "human_request",
+                      "unknown"
+                    ]
+                  },
+                  {
+                    "bsonType": "null"
+                  }
+                ]
+              },
+              "confidence": {
+                "anyOf": [
+                  {
+                    "bsonType": [
+                      "int",
+                      "long",
+                      "double"
+                    ],
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  {
+                    "bsonType": "null"
+                  }
+                ]
+              },
+              "sourceIds": {
+                "bsonType": "array",
+                "items": {
+                  "bsonType": "string",
+                  "pattern": "^[0-9a-fA-F]{24}$"
+                }
+              },
+              "model": {
+                "anyOf": [
+                  {
+                    "bsonType": "string"
+                  },
+                  {
+                    "bsonType": "null"
+                  }
+                ]
+              },
+              "promptVersion": {
+                "anyOf": [
+                  {
+                    "bsonType": "string"
+                  },
+                  {
+                    "bsonType": "null"
+                  }
+                ]
+              },
+              "latencyMs": {
+                "anyOf": [
+                  {
+                    "bsonType": [
+                      "int",
+                      "long"
+                    ],
+                    "minimum": 0
+                  },
+                  {
+                    "bsonType": "null"
+                  }
+                ]
+              },
+              "costMinor": {
+                "anyOf": [
+                  {
+                    "bsonType": [
+                      "int",
+                      "long"
+                    ],
+                    "minimum": 0
+                  },
+                  {
+                    "bsonType": "null"
+                  }
+                ]
+              },
+              "groundingBlocked": {
+                "anyOf": [
+                  {
+                    "bsonType": "bool"
+                  },
+                  {
+                    "bsonType": "null"
+                  }
+                ]
+              },
+              "blockReason": {
+                "anyOf": [
+                  {
+                    "bsonType": "string"
+                  },
+                  {
+                    "bsonType": "null"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "workspaceId": {
+        "bsonType": "objectId"
+      },
+      "userId": {
+        "bsonType": "objectId"
+      },
+      "role": {
+        "enum": [
+          "owner",
+          "admin",
+          "agent",
+          "viewer"
+        ]
+      },
+      "invitedBy": {
+        "anyOf": [
+          {
+            "bsonType": "objectId"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "joinedAt": {
+        "bsonType": "date"
+      },
+      "removedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      }
+    }
+  }
+}

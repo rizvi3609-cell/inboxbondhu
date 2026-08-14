@@ -1,0 +1,64 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "userId": {
+        "bsonType": "objectId"
+      },
+      "familyId": {
+        "bsonType": "string",
+        "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+      },
+      "refreshTokenHash": {
+        "bsonType": "string"
+      },
+      "generation": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "userAgent": {
+        "bsonType": "string",
+        "maxLength": 300
+      },
+      "ipHash": {
+        "bsonType": "string"
+      },
+      "lastUsedAt": {
+        "bsonType": "date"
+      },
+      "expiresAt": {
+        "bsonType": "date"
+      },
+      "revokedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "revokedReason": {
+        "anyOf": [
+          {
+            "enum": [
+              "logout",
+              "reuse_detected",
+              "evicted",
+              "member_removed",
+              "password_changed",
+              "rotated"
+            ]
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "workspaceId": {
+        "bsonType": "objectId"
+      },
+      "actorId": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "actorType": {
+        "enum": [
+          "user",
+          "system",
+          "ai"
+        ]
+      },
+      "actorRole": {
+        "anyOf": [
+          {
+            "enum": [
+              "owner",
+              "admin",
+              "agent",
+              "viewer"
+            ]
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "action": {
+        "bsonType": "string",
+        "pattern": "^[a-z_]+\\.[a-z_]+$"
+      },
+      "resourceType": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "resourceId": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "before": {
+        "anyOf": [
+          {
+            "bsonType": "object"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "after": {
+        "anyOf": [
+          {
+            "bsonType": "object"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "requestId": {
+        "bsonType": "string",
+        "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+      },
+      "ipHash": {
+        "anyOf": [
+          {
+            "bsonType": "string"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "userAgent": {
+        "anyOf": [
+          {
+            "bsonType": "string"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      }
+    }
+  }
+}

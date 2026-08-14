@@ -1,0 +1,20 @@
+{
+  "name": "inboxbondhu",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -b packages/contracts packages/core",
+    "test": "vitest run",
+    "seed": "tsx packages/core/src/db/seed.ts",
+    "jsonschema:generate": "tsx packages/core/src/db/jsonSchema/generate.ts",
+    "jsonschema:check": "tsx packages/core/src/db/jsonSchema/generate.ts --check"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "mongodb-memory-server": "^10.1.2",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4",
+    "vitest": "^2.1.8"
+  }
+}

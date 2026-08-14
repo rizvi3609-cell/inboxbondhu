@@ -1,0 +1,282 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "workspaceId": {
+        "bsonType": "objectId"
+      },
+      "orderNumber": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 1
+      },
+      "orderYear": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 2020
+      },
+      "orderCode": {
+        "bsonType": "string",
+        "pattern": "^ORD-\\d{4}-\\d{5}$"
+      },
+      "conversationId": {
+        "bsonType": "objectId"
+      },
+      "customerId": {
+        "bsonType": "objectId"
+      },
+      "items": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "productId": {
+              "bsonType": "objectId"
+            },
+            "variantSku": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "nameSnapshot": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "variantNameSnapshot": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "unitPriceMinor": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            },
+            "quantity": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 1
+            },
+            "lineTotalMinor": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            }
+          },
+          "required": [
+            "productId",
+            "variantSku",
+            "nameSnapshot",
+            "variantNameSnapshot",
+            "unitPriceMinor",
+            "quantity",
+            "lineTotalMinor"
+          ]
+        },
+        "minItems": 1
+      },
+      "subtotalMinor": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "discountMinor": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "discountPercent": {
+        "anyOf": [
+          {
+            "bsonType": [
+              "int",
+              "long"
+            ],
+            "minimum": 0,
+            "maximum": 50
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "deliveryFeeMinor": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "totalMinor": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "deliveryZone": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "deliveryAddress": {
+        "bsonType": "string",
+        "minLength": 1,
+        "maxLength": 500
+      },
+      "recipientName": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "recipientPhone": {
+        "bsonType": "string",
+        "pattern": "^01[3-9]\\d{8}$"
+      },
+      "fulfillmentStatus": {
+        "enum": [
+          "Collecting",
+          "AwaitingConfirmation",
+          "Confirmed",
+          "Processing",
+          "Shipped",
+          "Delivered",
+          "Cancelled"
+        ]
+      },
+      "paymentStatus": {
+        "enum": [
+          "Unpaid",
+          "PaymentPending",
+          "PaymentFailed",
+          "Paid",
+          "Refunded"
+        ]
+      },
+      "paymentMethod": {
+        "enum": [
+          "cod",
+          "bkash",
+          "nagad",
+          "rocket"
+        ]
+      },
+      "paymentRef": {
+        "anyOf": [
+          {
+            "bsonType": "string"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "statusHistory": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "from": {
+              "bsonType": "string"
+            },
+            "to": {
+              "bsonType": "string"
+            },
+            "at": {
+              "bsonType": "date"
+            },
+            "byType": {
+              "enum": [
+                "ai",
+                "agent",
+                "system"
+              ]
+            },
+            "byUserId": {
+              "anyOf": [
+                {
+                  "bsonType": "objectId"
+                },
+                {
+                  "bsonType": "null"
+                }
+              ]
+            },
+            "note": {
+              "anyOf": [
+                {
+                  "bsonType": "string"
+                },
+                {
+                  "bsonType": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "from",
+            "to",
+            "at",
+            "byType"
+          ]
+        }
+      },
+      "createdByType": {
+        "enum": [
+          "ai",
+          "agent"
+        ]
+      },
+      "confirmedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "cancelledAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "cancellationReason": {
+        "anyOf": [
+          {
+            "bsonType": "string"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "version": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "purgeAfter": {
+        "bsonType": "date"
+      }
+    }
+  }
+}

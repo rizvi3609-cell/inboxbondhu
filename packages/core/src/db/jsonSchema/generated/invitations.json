@@ -1,0 +1,58 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "workspaceId": {
+        "bsonType": "objectId"
+      },
+      "email": {
+        "bsonType": "string",
+        "maxLength": 320
+      },
+      "role": {
+        "enum": [
+          "admin",
+          "agent",
+          "viewer"
+        ]
+      },
+      "tokenHash": {
+        "bsonType": "string"
+      },
+      "invitedBy": {
+        "bsonType": "objectId"
+      },
+      "status": {
+        "enum": [
+          "pending",
+          "accepted",
+          "revoked",
+          "expired"
+        ]
+      },
+      "expiresAt": {
+        "bsonType": "date"
+      },
+      "acceptedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "acceptedUserId": {
+        "anyOf": [
+          {
+            "bsonType": "objectId"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      }
+    }
+  }
+}

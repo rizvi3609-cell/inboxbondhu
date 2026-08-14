@@ -1,0 +1,124 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "ulid": {
+        "bsonType": "string",
+        "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+      },
+      "email": {
+        "bsonType": "string",
+        "maxLength": 320
+      },
+      "emailVerifiedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "passwordHash": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "name": {
+        "bsonType": "string",
+        "minLength": 2,
+        "maxLength": 80
+      },
+      "phone": {
+        "anyOf": [
+          {
+            "bsonType": "string",
+            "pattern": "^01[3-9]\\d{8}$"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "locale": {
+        "enum": [
+          "bn-en"
+        ]
+      },
+      "status": {
+        "enum": [
+          "active",
+          "deactivated",
+          "pending_deletion"
+        ]
+      },
+      "deactivatedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "purgeAfter": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "failedLoginCount": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "lockedUntil": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "unlockOtpHash": {
+        "anyOf": [
+          {
+            "bsonType": "string"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "unlockOtpExpiresAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "lastLoginAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      }
+    }
+  }
+}

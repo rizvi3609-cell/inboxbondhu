@@ -1,0 +1,79 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "provider": {
+        "enum": [
+          "facebook",
+          "instagram"
+        ]
+      },
+      "externalPageId": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "workspaceId": {
+        "anyOf": [
+          {
+            "bsonType": "objectId"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "dedupeKey": {
+        "bsonType": "string",
+        "minLength": 1
+      },
+      "signatureValid": {
+        "bsonType": "bool"
+      },
+      "rawPayload": {
+        "bsonType": "object"
+      },
+      "receivedAt": {
+        "bsonType": "date"
+      },
+      "processStatus": {
+        "enum": [
+          "pending",
+          "processed",
+          "failed",
+          "orphaned",
+          "invalid_signature"
+        ]
+      },
+      "processedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "attempts": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "lastError": {
+        "anyOf": [
+          {
+            "bsonType": "string"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "expiresAt": {
+        "bsonType": "date"
+      }
+    }
+  }
+}

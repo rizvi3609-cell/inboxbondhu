@@ -1,0 +1,147 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "workspaceId": {
+        "bsonType": "objectId"
+      },
+      "channelConnectionId": {
+        "bsonType": "objectId"
+      },
+      "customerId": {
+        "bsonType": "objectId"
+      },
+      "status": {
+        "enum": [
+          "open",
+          "pending",
+          "resolved"
+        ]
+      },
+      "mode": {
+        "enum": [
+          "ai",
+          "human"
+        ]
+      },
+      "assignedTo": {
+        "anyOf": [
+          {
+            "bsonType": "objectId"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "assignedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "handoverReason": {
+        "anyOf": [
+          {
+            "enum": [
+              "low_confidence",
+              "keyword",
+              "explicit_request",
+              "complaint",
+              "repeated_failure"
+            ]
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "lastMessageAt": {
+        "bsonType": "date"
+      },
+      "lastMessagePreview": {
+        "anyOf": [
+          {
+            "bsonType": "string",
+            "maxLength": 140
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "lastMessageDirection": {
+        "anyOf": [
+          {
+            "enum": [
+              "inbound",
+              "outbound"
+            ]
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "unreadCount": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "messageCount": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "metaWindowExpiresAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "countedForBilling": {
+        "bsonType": "bool"
+      },
+      "billingPeriodKey": {
+        "anyOf": [
+          {
+            "bsonType": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "tags": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "string"
+        },
+        "maxItems": 20
+      },
+      "version": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "purgeAfter": {
+        "bsonType": "date"
+      }
+    }
+  }
+}

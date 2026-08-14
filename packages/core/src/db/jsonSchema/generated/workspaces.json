@@ -1,0 +1,219 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "name": {
+        "bsonType": "string",
+        "minLength": 2,
+        "maxLength": 80
+      },
+      "slug": {
+        "bsonType": "string",
+        "pattern": "^[a-z0-9-]{3,40}$"
+      },
+      "ownerId": {
+        "bsonType": "objectId"
+      },
+      "plan": {
+        "enum": [
+          "trial",
+          "starter",
+          "growth"
+        ]
+      },
+      "trialEndsAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "timezone": {
+        "enum": [
+          "Asia/Dhaka"
+        ]
+      },
+      "currency": {
+        "enum": [
+          "BDT"
+        ]
+      },
+      "language": {
+        "enum": [
+          "bn-en"
+        ]
+      },
+      "businessHours": {
+        "bsonType": "object",
+        "properties": {
+          "enabled": {
+            "bsonType": "bool"
+          },
+          "days": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "object",
+              "properties": {
+                "day": {
+                  "bsonType": [
+                    "int",
+                    "long"
+                  ],
+                  "minimum": 0,
+                  "maximum": 6
+                },
+                "open": {
+                  "bsonType": "string",
+                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                },
+                "close": {
+                  "bsonType": "string",
+                  "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+                },
+                "closed": {
+                  "bsonType": "bool"
+                }
+              },
+              "required": [
+                "day",
+                "open",
+                "close",
+                "closed"
+              ]
+            },
+            "minItems": 7,
+            "maxItems": 7
+          },
+          "awayMessage": {
+            "anyOf": [
+              {
+                "bsonType": "string",
+                "maxLength": 500
+              },
+              {
+                "bsonType": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "days"
+        ]
+      },
+      "aiConfig": {
+        "bsonType": "object",
+        "properties": {
+          "enabled": {
+            "bsonType": "bool"
+          },
+          "tone": {
+            "enum": [
+              "friendly",
+              "formal",
+              "concise"
+            ]
+          },
+          "autoReplyEnabled": {
+            "bsonType": "bool"
+          },
+          "confidenceThreshold": {
+            "bsonType": [
+              "int",
+              "long",
+              "double"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "handoverKeywords": {
+            "bsonType": "array",
+            "items": {
+              "bsonType": "string"
+            },
+            "maxItems": 50
+          },
+          "maxDiscountPercent": {
+            "bsonType": [
+              "int",
+              "long"
+            ],
+            "minimum": 0,
+            "maximum": 50
+          },
+          "promptVersion": {
+            "bsonType": "string"
+          }
+        }
+      },
+      "deliveryZones": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "object",
+          "properties": {
+            "name": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "feeMinor": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            },
+            "etaDays": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            }
+          },
+          "required": [
+            "name",
+            "feeMinor",
+            "etaDays"
+          ]
+        }
+      },
+      "status": {
+        "enum": [
+          "active",
+          "suspended",
+          "deactivated",
+          "pending_deletion"
+        ]
+      },
+      "deactivatedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "purgeAfter": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "version": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      }
+    }
+  }
+}

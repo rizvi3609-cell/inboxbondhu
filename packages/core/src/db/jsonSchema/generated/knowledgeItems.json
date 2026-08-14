@@ -1,0 +1,97 @@
+{
+  "$jsonSchema": {
+    "bsonType": "object",
+    "properties": {
+      "workspaceId": {
+        "bsonType": "objectId"
+      },
+      "question": {
+        "bsonType": "string",
+        "minLength": 5,
+        "maxLength": 500
+      },
+      "answer": {
+        "bsonType": "string",
+        "minLength": 5,
+        "maxLength": 2000
+      },
+      "category": {
+        "anyOf": [
+          {
+            "enum": [
+              "delivery",
+              "payment",
+              "return",
+              "sizing",
+              "general"
+            ]
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "keywords": {
+        "bsonType": "array",
+        "items": {
+          "bsonType": "string"
+        },
+        "maxItems": 20
+      },
+      "status": {
+        "enum": [
+          "draft",
+          "approved",
+          "archived"
+        ]
+      },
+      "searchText": {
+        "bsonType": "string"
+      },
+      "usageCount": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      },
+      "lastUsedAt": {
+        "anyOf": [
+          {
+            "bsonType": "date"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "createdBy": {
+        "anyOf": [
+          {
+            "bsonType": "objectId"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "approvedBy": {
+        "anyOf": [
+          {
+            "bsonType": "objectId"
+          },
+          {
+            "bsonType": "null"
+          }
+        ]
+      },
+      "version": {
+        "bsonType": [
+          "int",
+          "long"
+        ],
+        "minimum": 0
+      }
+    }
+  }
+}
