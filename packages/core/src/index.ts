@@ -9,6 +9,7 @@ export { createEventBus, type EventBus, type DomainEvent, type EventHandler } fr
 export * from './db/index.js'
 export * from './modules/identity/index.js'
 export * from './modules/workspace/index.js'
+export * from './modules/channels/index.js'
 export {
   bootDataLayer,
   shutdownDataLayer,

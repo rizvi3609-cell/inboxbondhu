@@ -5,8 +5,12 @@
 import { Worker, Queue, type Processor } from 'bullmq'
 import { loadConfig } from '@inboxbondhu/config'
 import { createLogger } from '@inboxbondhu/logger'
-import { bootDataLayer, shutdownDataLayer, type DbClients } from '@inboxbondhu/core'
+import {
+  bootDataLayer, drainRedisBuffer, makeKeyring, shutdownDataLayer, type DbClients,
+} from '@inboxbondhu/core'
+import { createMockMetaClient } from '@inboxbondhu/integrations'
 import { QUEUE_SPECS, emailBackoffMs, type JobEnvelope } from './queues.js'
+import { makeOutboundMessageProcessor, makeWebhookIngestProcessor } from './processors.js'
 
 async function main(): Promise<void> {
   const config = loadConfig()
@@ -43,22 +47,53 @@ async function main(): Promise<void> {
       }),
   )
 
-  // Empty processors — Phase 0 proves the pipeline; phases 3–8 fill them in.
+  // Phase 3 wires webhook-ingest + outbound-message; the rest stay no-ops
+  // until their phases. OPEN QUESTION: the real Meta HTTP client needs live
+  // app credentials — the mock keeps the pipeline provable; swap is one file.
+  const keyring = makeKeyring(config.CHANNEL_TOKEN_MASTER_KEY, config.CHANNEL_TOKEN_KEY_VERSION)
+  const { client: metaClient } = createMockMetaClient()
+
+  const queueByName = new Map(queues.map((q) => [q.name, q]))
+  const webhookIngest = makeWebhookIngestProcessor({
+    log,
+    queues: {
+      conversationAi: queueByName.get('conversation-ai')!,
+      mediaFetch: queueByName.get('media-fetch')!,
+    },
+  })
+  const outboundMessage = makeOutboundMessageProcessor({ log, meta: metaClient, keyring })
+
   const emptyProcessor: Processor<JobEnvelope> = (job) => {
     log.info({ queue: job.queueName, jobId: job.id, requestId: job.data.requestId }, 'no-op processor')
     return Promise.resolve()
   }
 
-  const workers = QUEUE_SPECS.map(
-    (spec) =>
-      new Worker<JobEnvelope>(spec.name, emptyProcessor, {
-        connection,
-        concurrency: spec.concurrency,
-        settings: {
-          backoffStrategy: (attemptsMade: number) => emailBackoffMs(attemptsMade - 1),
-        },
-      }),
-  )
+  const workers = QUEUE_SPECS.map((spec) => {
+    const processor: Processor<never> =
+      spec.name === 'webhook-ingest'
+        ? (webhookIngest as Processor<never>)
+        : spec.name === 'outbound-message'
+          ? (outboundMessage as Processor<never>)
+          : (emptyProcessor as Processor<never>)
+    return new Worker(spec.name, processor, {
+      connection,
+      concurrency: spec.concurrency,
+      settings: {
+        backoffStrategy: (attemptsMade: number) => emailBackoffMs(attemptsMade - 1),
+      },
+    })
+  })
+
+  // webhookBufferDrainer — every 30 s, replays the Redis outage buffer once
+  // Mongo returns. Dedupe (I48) makes replay safe. Journal half lands in P8.
+  const drainerInterval = setInterval(() => {
+    void drainRedisBuffer(clients.redis, async (jobData) => {
+      await queueByName.get('webhook-ingest')!.add('webhook-ingest', jobData as unknown as JobEnvelope)
+    }).then(({ drained, deduped }) => {
+      if (drained > 0 || deduped > 0) log.info({ drained, deduped }, 'webhookBufferDrainer')
+    }).catch((err: Error) => log.warn({ err: err.message }, 'webhookBufferDrainer failed'))
+  }, 30_000)
+  drainerInterval.unref()
 
   log.info({ queues: QUEUE_SPECS.map((q) => q.name) }, 'worker ready')
 

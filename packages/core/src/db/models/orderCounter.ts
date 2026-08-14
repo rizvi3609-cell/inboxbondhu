@@ -38,11 +38,22 @@ export async function nextOrderCode(
   year: number,
   session?: mongoose.ClientSession,
 ): Promise<{ orderNumber: number; orderCode: string }> {
-  const doc = await OrderCounter.findOneAndUpdate(
-    { _id: `${workspaceId}:${year}`, workspaceId },
-    { $inc: { seq: 1 }, $setOnInsert: { year }, $set: { updatedAt: new Date() } },
-    { upsert: true, new: true, ...(session ? { session } : {}) },
-  )
-  const seq = doc!.seq
-  return { orderNumber: seq, orderCode: `ORD-${year}-${String(seq).padStart(5, '0')}` }
+  // MongoDB upsert race: when the counter document does not exist yet, two
+  // concurrent upserts can BOTH take the insert path — one wins, the loser
+  // gets E11000 on _id. The retry then finds the doc and $incs normally.
+  // This only ever happens on a workspace's first order of a year.
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      const doc = await OrderCounter.findOneAndUpdate(
+        { _id: `${workspaceId}:${year}`, workspaceId },
+        { $inc: { seq: 1 }, $setOnInsert: { year }, $set: { updatedAt: new Date() } },
+        { upsert: true, new: true, ...(session ? { session } : {}) },
+      )
+      const seq = doc!.seq
+      return { orderNumber: seq, orderCode: `ORD-${year}-${String(seq).padStart(5, '0')}` }
+    } catch (err) {
+      if ((err as { code?: number }).code === 11000 && attempt < 5) continue
+      throw err
+    }
+  }
 }

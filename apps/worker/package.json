@@ -10,9 +10,11 @@
   "dependencies": {
     "@inboxbondhu/config": "workspace:*",
     "@inboxbondhu/core": "workspace:*",
+    "@inboxbondhu/integrations": "workspace:^",
     "@inboxbondhu/logger": "workspace:*",
     "bullmq": "^5.34.0",
-    "ioredis": "^5.4.2"
+    "ioredis": "^5.4.2",
+    "pino": "^9.5.0"
   },
   "devDependencies": {
     "tsx": "^4.19.0"

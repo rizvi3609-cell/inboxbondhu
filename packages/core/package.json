@@ -12,6 +12,7 @@
   "dependencies": {
     "@inboxbondhu/config": "workspace:*",
     "@inboxbondhu/contracts": "workspace:*",
+    "@inboxbondhu/integrations": "workspace:^",
     "argon2": "^0.45.1",
     "ioredis": "^5.4.2",
     "jsonwebtoken": "^9.0.3",

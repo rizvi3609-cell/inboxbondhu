@@ -5,11 +5,16 @@
 import express, { type Express } from 'express'
 import cookieParser from 'cookie-parser'
 import type { Redis } from 'ioredis'
-import type { DbClients } from '@inboxbondhu/core'
+import type { ChannelsService, DbClients } from '@inboxbondhu/core'
 import { healthCheck, IdentityService, WorkspaceService } from '@inboxbondhu/core'
-import { errorHandler, membershipCacheInvalidator, requestId } from './middleware/core.js'
+import {
+  auth as authMiddleware, csrf as csrfMiddleware, tenant as tenantMiddleware,
+  errorHandler, membershipCacheInvalidator, requestId,
+} from './middleware/core.js'
 import { authRouter, meRouter } from './routes/v1/auth.js'
 import { workspacesRouter } from './routes/v1/workspaces.js'
+import { channelsRouter } from './routes/v1/channels.js'
+import { metaWebhookRouter, type MetaWebhookDeps } from './routes/webhooks/meta.js'
 
 export interface AppDeps {
   clients: DbClients | null // null in unit tests that only hit /healthz
@@ -24,12 +29,24 @@ export interface AppDeps {
     maxSessions: number
     secureCookies: boolean
   }
+  /** Phase 3: the ≤500 ms Meta webhook path. */
+  webhook?: MetaWebhookDeps
+  /** Phase 3: channel management routes (#35–39). */
+  channels?: { service: ChannelsService; metaAppId: string; apiUrl: string }
 }
 
 export function createApp(deps: AppDeps): Express {
   const app = express()
   app.disable('x-powered-by')
   app.use(requestId())
+
+  // Webhook FIRST — before json body-parsing, rate limits, auth, csrf, tenant
+  // (§8.1: nothing that can touch Mongo/Redis synchronously in front of it;
+  // it needs the raw body for the HMAC).
+  if (deps.webhook) {
+    app.use('/webhooks', metaWebhookRouter(deps.webhook))
+  }
+
   app.use(express.json({ limit: '256kb' }))
   app.use(cookieParser())
 
@@ -92,6 +109,21 @@ export function createApp(deps: AppDeps): Express {
         jwtSecretPrevious: deps.auth.jwtSecretPrevious,
       }),
     )
+
+    // #35–39: /w/:workspaceId/channels — behind auth+csrf+tenant like the rest.
+    if (deps.channels) {
+      app.use(
+        '/api/v1/w/:workspaceId/channels',
+        authMiddleware(deps.auth.jwtSecret, deps.auth.jwtSecretPrevious),
+        csrfMiddleware(),
+        tenantMiddleware(redis),
+        channelsRouter({
+          channels: deps.channels.service,
+          metaAppId: deps.channels.metaAppId,
+          apiUrl: deps.channels.apiUrl,
+        }),
+      )
+    }
   }
 
   app.use(errorHandler())

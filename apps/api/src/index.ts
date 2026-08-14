@@ -30,10 +30,23 @@ async function main(): Promise<void> {
     process.exit(1)
   }
 
+  // Phase 3: webhook-ingest enqueue via BullMQ on the shared Redis.
+  const { Queue } = await import('bullmq')
+  const webhookIngestQueue = new Queue('webhook-ingest', { connection: { url: config.REDIS_URL } })
+
   const app = createApp({
     clients,
     version: VERSION,
     startedAt: Date.now(),
+    webhook: {
+      redis: clients.redis,
+      appSecret: config.META_APP_SECRET,
+      verifyToken: config.META_VERIFY_TOKEN,
+      journalDir: '/var/lib/inboxbondhu/journal', // D22
+      enqueue: async (job) => {
+        await webhookIngestQueue.add('webhook-ingest', job)
+      },
+    },
     auth: {
       jwtSecret: config.JWT_SECRET,
       jwtSecretPrevious: config.JWT_SECRET_PREVIOUS || undefined,
