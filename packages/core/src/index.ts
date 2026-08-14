@@ -10,6 +10,7 @@ export * from './db/index.js'
 export * from './modules/identity/index.js'
 export * from './modules/workspace/index.js'
 export * from './modules/channels/index.js'
+export * from './modules/inbox/index.js'
 export {
   bootDataLayer,
   shutdownDataLayer,

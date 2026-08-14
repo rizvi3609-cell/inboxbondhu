@@ -6,8 +6,10 @@ import { Worker, Queue, type Processor } from 'bullmq'
 import { loadConfig } from '@inboxbondhu/config'
 import { createLogger } from '@inboxbondhu/logger'
 import {
-  bootDataLayer, drainRedisBuffer, makeKeyring, shutdownDataLayer, type DbClients,
+  bootDataLayer, drainRedisBuffer, makeKeyring, shutdownDataLayer, sweepStuckMessages,
+  type DbClients,
 } from '@inboxbondhu/core'
+import { withJobLock } from './jobLock.js'
 import { createMockMetaClient } from '@inboxbondhu/integrations'
 import { QUEUE_SPECS, emailBackoffMs, type JobEnvelope } from './queues.js'
 import { makeOutboundMessageProcessor, makeWebhookIngestProcessor } from './processors.js'
@@ -86,6 +88,17 @@ async function main(): Promise<void> {
 
   // webhookBufferDrainer — every 30 s, replays the Redis outage buffer once
   // Mongo returns. Dedupe (I48) makes replay safe. Journal half lands in P8.
+  // stuckMessageSweeper — every 30 s under the Redis job lock (§13.2 row 1):
+  // queued > STUCK_MESSAGE_SECONDS → failed, surfaced in Failed Jobs.
+  const stuckInterval = setInterval(() => {
+    void withJobLock(clients.redis, 'stuckMessageSweeper', 25_000, () =>
+      sweepStuckMessages(config.STUCK_MESSAGE_SECONDS),
+    ).then((result) => {
+      if (result && result.swept > 0) log.warn({ swept: result.swept }, 'stuckMessageSweeper marked messages failed')
+    }).catch((err: Error) => log.warn({ err: err.message }, 'stuckMessageSweeper failed'))
+  }, 30_000)
+  stuckInterval.unref()
+
   const drainerInterval = setInterval(() => {
     void drainRedisBuffer(clients.redis, async (jobData) => {
       await queueByName.get('webhook-ingest')!.add('webhook-ingest', jobData as unknown as JobEnvelope)

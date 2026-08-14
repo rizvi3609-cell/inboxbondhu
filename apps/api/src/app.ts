@@ -5,7 +5,7 @@
 import express, { type Express } from 'express'
 import cookieParser from 'cookie-parser'
 import type { Redis } from 'ioredis'
-import type { ChannelsService, DbClients } from '@inboxbondhu/core'
+import type { ChannelsService, DbClients, InboxService } from '@inboxbondhu/core'
 import { healthCheck, IdentityService, WorkspaceService } from '@inboxbondhu/core'
 import {
   auth as authMiddleware, csrf as csrfMiddleware, tenant as tenantMiddleware,
@@ -14,6 +14,7 @@ import {
 import { authRouter, meRouter } from './routes/v1/auth.js'
 import { workspacesRouter } from './routes/v1/workspaces.js'
 import { channelsRouter } from './routes/v1/channels.js'
+import { conversationsRouter, messagesRouter } from './routes/v1/conversations.js'
 import { metaWebhookRouter, type MetaWebhookDeps } from './routes/webhooks/meta.js'
 
 export interface AppDeps {
@@ -33,6 +34,8 @@ export interface AppDeps {
   webhook?: MetaWebhookDeps
   /** Phase 3: channel management routes (#35–39). */
   channels?: { service: ChannelsService; metaAppId: string; apiUrl: string }
+  /** Phase 4: inbox routes (#40–45). */
+  inbox?: { service: InboxService }
 }
 
 export function createApp(deps: AppDeps): Express {
@@ -109,6 +112,25 @@ export function createApp(deps: AppDeps): Express {
         jwtSecretPrevious: deps.auth.jwtSecretPrevious,
       }),
     )
+
+    // #40–45: /w/:workspaceId/conversations + /messages.
+    if (deps.inbox) {
+      const inboxService = deps.inbox.service
+      app.use(
+        '/api/v1/w/:workspaceId/conversations',
+        authMiddleware(deps.auth.jwtSecret, deps.auth.jwtSecretPrevious),
+        csrfMiddleware(),
+        tenantMiddleware(redis),
+        conversationsRouter({ inbox: inboxService }),
+      )
+      app.use(
+        '/api/v1/w/:workspaceId/messages',
+        authMiddleware(deps.auth.jwtSecret, deps.auth.jwtSecretPrevious),
+        csrfMiddleware(),
+        tenantMiddleware(redis),
+        messagesRouter({ inbox: inboxService }),
+      )
+    }
 
     // #35–39: /w/:workspaceId/channels — behind auth+csrf+tenant like the rest.
     if (deps.channels) {

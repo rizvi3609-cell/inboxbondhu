@@ -34,6 +34,13 @@ async function main(): Promise<void> {
   const { Queue } = await import('bullmq')
   const webhookIngestQueue = new Queue('webhook-ingest', { connection: { url: config.REDIS_URL } })
 
+  // Phase 4: inbox service — outbound-message queue + Redis idempotency store.
+  const { InboxService, redisIdempotencyStore } = await import('@inboxbondhu/core')
+  const outboundQueue = new Queue('outbound-message', { connection: { url: config.REDIS_URL } })
+  const inboxService = new InboxService(redisIdempotencyStore(clients.redis), async (job) => {
+    await outboundQueue.add('outbound-message', job)
+  })
+
   const app = createApp({
     clients,
     version: VERSION,
@@ -56,6 +63,7 @@ async function main(): Promise<void> {
       maxSessions: config.MAX_CONCURRENT_SESSIONS,
       secureCookies: config.NODE_ENV === 'production',
     },
+    inbox: { service: inboxService },
   })
   const server: Server = app.listen(config.PORT, '0.0.0.0', () => {
     log.info({ port: config.PORT }, 'api listening')
