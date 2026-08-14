@@ -9,9 +9,10 @@ import type { Queue } from 'bullmq'
 import type { Logger } from 'pino'
 import {
   processWebhookEvent, deliverOutboundMessage, CatalogueService,
+  mongoTextRetriever, runAiPipeline,
   type Keyring,
 } from '@inboxbondhu/core'
-import type { MetaClient } from '@inboxbondhu/integrations'
+import type { LlmClient, MetaClient } from '@inboxbondhu/integrations'
 
 export interface WebhookIngestJob {
   dedupeKey: string
@@ -76,6 +77,48 @@ export function makeCsvImportProcessor(deps: { log: Logger }): Processor<CsvImpo
     const { workspaceId, requestId, payload } = job.data
     const result = await catalogue.processImport(workspaceId, payload.importId)
     deps.log.info({ requestId, workspaceId, importId: payload.importId, ...result }, 'csv-import finished')
+  }
+}
+
+export interface ConversationAiJob {
+  workspaceId: string
+  requestId: string
+  payload: { conversationId: string; messageId: string }
+}
+
+/**
+ * conversation-ai processor — concurrency 3 (§13.1: bounds LLM spend).
+ * PRD §2.7 concurrency lock: one job per conversation at a time via a Redis
+ * lock; a locked conversation's job is delayed, not dropped.
+ */
+export function makeConversationAiProcessor(deps: {
+  log: Logger
+  llm: LlmClient
+  enqueueOutbound: (job: { workspaceId: string; requestId: string; payload: { messageId: string } }) => Promise<void>
+  acquireConvLock: (conversationId: string) => Promise<boolean>
+  releaseConvLock: (conversationId: string) => Promise<void>
+}): Processor<ConversationAiJob> {
+  return async (job: Job<ConversationAiJob>) => {
+    const { workspaceId, requestId, payload } = job.data
+    const locked = await deps.acquireConvLock(payload.conversationId)
+    if (!locked) {
+      // Sequential per conversation: retry shortly rather than racing.
+      await job.moveToDelayed(Date.now() + 2_000, job.token)
+      return
+    }
+    try {
+      const result = await runAiPipeline(workspaceId, payload.conversationId, payload.messageId, requestId, {
+        llm: deps.llm,
+        retriever: mongoTextRetriever,
+        enqueueOutbound: deps.enqueueOutbound,
+      })
+      deps.log.info(
+        { requestId, workspaceId, conversationId: payload.conversationId, outcome: result.outcome, intent: result.intent, latencyMs: result.latencyMs },
+        'conversation-ai',
+      )
+    } finally {
+      await deps.releaseConvLock(payload.conversationId)
+    }
   }
 }
 

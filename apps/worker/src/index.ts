@@ -10,9 +10,12 @@ import {
   type DbClients,
 } from '@inboxbondhu/core'
 import { withJobLock } from './jobLock.js'
-import { createMockMetaClient } from '@inboxbondhu/integrations'
+import { createMockLlmClient, createMockMetaClient } from '@inboxbondhu/integrations'
 import { QUEUE_SPECS, emailBackoffMs, type JobEnvelope } from './queues.js'
-import { makeCsvImportProcessor, makeOutboundMessageProcessor, makeWebhookIngestProcessor } from './processors.js'
+import {
+  makeConversationAiProcessor, makeCsvImportProcessor,
+  makeOutboundMessageProcessor, makeWebhookIngestProcessor,
+} from './processors.js'
 
 async function main(): Promise<void> {
   const config = loadConfig()
@@ -66,6 +69,23 @@ async function main(): Promise<void> {
   const outboundMessage = makeOutboundMessageProcessor({ log, meta: metaClient, keyring })
   const csvImport = makeCsvImportProcessor({ log })
 
+  // Phase 6: conversation-ai. OPEN QUESTION: mock LLM until a live key —
+  // swap is createMockLlmClient → the real OpenAI client, one line.
+  const { client: llmClient } = createMockLlmClient()
+  const conversationAi = makeConversationAiProcessor({
+    log,
+    llm: llmClient,
+    enqueueOutbound: async (job) => {
+      await queueByName.get('outbound-message')!.add('outbound-message', job as unknown as JobEnvelope)
+    },
+    // PRD §2.7 per-conversation concurrency lock (60 s TTL > 15 s deadline).
+    acquireConvLock: async (conversationId) =>
+      (await clients.redis.set(`lock:conv:${conversationId}`, '1', 'PX', 60_000, 'NX')) === 'OK',
+    releaseConvLock: async (conversationId) => {
+      await clients.redis.del(`lock:conv:${conversationId}`)
+    },
+  })
+
   const emptyProcessor: Processor<JobEnvelope> = (job) => {
     log.info({ queue: job.queueName, jobId: job.id, requestId: job.data.requestId }, 'no-op processor')
     return Promise.resolve()
@@ -79,7 +99,9 @@ async function main(): Promise<void> {
           ? (outboundMessage as Processor<never>)
           : spec.name === 'csv-import'
             ? (csvImport as Processor<never>)
-            : (emptyProcessor as Processor<never>)
+            : spec.name === 'conversation-ai'
+              ? (conversationAi as Processor<never>)
+              : (emptyProcessor as Processor<never>)
     return new Worker(spec.name, processor, {
       connection,
       concurrency: spec.concurrency,
