@@ -8,7 +8,7 @@ import type { Job, Processor } from 'bullmq'
 import type { Queue } from 'bullmq'
 import type { Logger } from 'pino'
 import {
-  processWebhookEvent, deliverOutboundMessage,
+  processWebhookEvent, deliverOutboundMessage, CatalogueService,
   type Keyring,
 } from '@inboxbondhu/core'
 import type { MetaClient } from '@inboxbondhu/integrations'
@@ -56,6 +56,26 @@ export function makeWebhookIngestProcessor(deps: {
         payload: { conversationId: outcome.conversationId, messageId: outcome.messageId },
       })
     }
+  }
+}
+
+export interface CsvImportJob {
+  workspaceId: string
+  requestId: string
+  payload: { importId: string }
+}
+
+/**
+ * csv-import processor — concurrency 1 so checkpointing stays coherent.
+ * The service resumes from lastProcessedRow; a crash redoes ≤ 100 rows with
+ * upsert-idempotent writes (MVP gate #9).
+ */
+export function makeCsvImportProcessor(deps: { log: Logger }): Processor<CsvImportJob> {
+  const catalogue = new CatalogueService()
+  return async (job: Job<CsvImportJob>) => {
+    const { workspaceId, requestId, payload } = job.data
+    const result = await catalogue.processImport(workspaceId, payload.importId)
+    deps.log.info({ requestId, workspaceId, importId: payload.importId, ...result }, 'csv-import finished')
   }
 }
 

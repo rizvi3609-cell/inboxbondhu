@@ -35,11 +35,16 @@ async function main(): Promise<void> {
   const webhookIngestQueue = new Queue('webhook-ingest', { connection: { url: config.REDIS_URL } })
 
   // Phase 4: inbox service — outbound-message queue + Redis idempotency store.
-  const { InboxService, redisIdempotencyStore } = await import('@inboxbondhu/core')
+  const { InboxService, redisIdempotencyStore, CatalogueService, KnowledgeService } = await import('@inboxbondhu/core')
   const outboundQueue = new Queue('outbound-message', { connection: { url: config.REDIS_URL } })
   const inboxService = new InboxService(redisIdempotencyStore(clients.redis), async (job) => {
     await outboundQueue.add('outbound-message', job)
   })
+
+  // Phase 5: catalogue + knowledge + csv-import queue.
+  const csvImportQueue = new Queue('csv-import', { connection: { url: config.REDIS_URL } })
+  const catalogueService = new CatalogueService()
+  const knowledgeService = new KnowledgeService()
 
   const app = createApp({
     clients,
@@ -64,6 +69,13 @@ async function main(): Promise<void> {
       secureCookies: config.NODE_ENV === 'production',
     },
     inbox: { service: inboxService },
+    catalogue: {
+      catalogue: catalogueService,
+      knowledge: knowledgeService,
+      enqueueImport: async (job) => {
+        await csvImportQueue.add('csv-import', job)
+      },
+    },
   })
   const server: Server = app.listen(config.PORT, '0.0.0.0', () => {
     log.info({ port: config.PORT }, 'api listening')

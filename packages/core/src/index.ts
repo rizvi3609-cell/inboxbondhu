@@ -11,6 +11,8 @@ export * from './modules/identity/index.js'
 export * from './modules/workspace/index.js'
 export * from './modules/channels/index.js'
 export * from './modules/inbox/index.js'
+export * from './modules/catalogue/index.js'
+export * from './modules/knowledge/index.js'
 export {
   bootDataLayer,
   shutdownDataLayer,

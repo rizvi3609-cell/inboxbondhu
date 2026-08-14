@@ -5,7 +5,7 @@
 import express, { type Express } from 'express'
 import cookieParser from 'cookie-parser'
 import type { Redis } from 'ioredis'
-import type { ChannelsService, DbClients, InboxService } from '@inboxbondhu/core'
+import type { CatalogueService, ChannelsService, DbClients, InboxService, KnowledgeService } from '@inboxbondhu/core'
 import { healthCheck, IdentityService, WorkspaceService } from '@inboxbondhu/core'
 import {
   auth as authMiddleware, csrf as csrfMiddleware, tenant as tenantMiddleware,
@@ -15,6 +15,7 @@ import { authRouter, meRouter } from './routes/v1/auth.js'
 import { workspacesRouter } from './routes/v1/workspaces.js'
 import { channelsRouter } from './routes/v1/channels.js'
 import { conversationsRouter, messagesRouter } from './routes/v1/conversations.js'
+import { importsRouter, knowledgeRouter, productsRouter } from './routes/v1/catalogue.js'
 import { metaWebhookRouter, type MetaWebhookDeps } from './routes/webhooks/meta.js'
 
 export interface AppDeps {
@@ -36,6 +37,12 @@ export interface AppDeps {
   channels?: { service: ChannelsService; metaAppId: string; apiUrl: string }
   /** Phase 4: inbox routes (#40–45). */
   inbox?: { service: InboxService }
+  /** Phase 5: catalogue + knowledge routes (#46–57). */
+  catalogue?: {
+    catalogue: CatalogueService
+    knowledge: KnowledgeService
+    enqueueImport: (job: { workspaceId: string; requestId: string; payload: { importId: string } }) => Promise<void>
+  }
 }
 
 export function createApp(deps: AppDeps): Express {
@@ -130,6 +137,20 @@ export function createApp(deps: AppDeps): Express {
         tenantMiddleware(redis),
         messagesRouter({ inbox: inboxService }),
       )
+    }
+
+    // #46–57: /w/:workspaceId/{products,imports,knowledge}.
+    if (deps.catalogue) {
+      const chain = [
+        authMiddleware(deps.auth.jwtSecret, deps.auth.jwtSecretPrevious),
+        csrfMiddleware(),
+        tenantMiddleware(redis),
+      ] as const
+      app.use('/api/v1/w/:workspaceId/products', ...chain, productsRouter({
+        catalogue: deps.catalogue.catalogue, redis, enqueueImport: deps.catalogue.enqueueImport,
+      }))
+      app.use('/api/v1/w/:workspaceId/imports', ...chain, importsRouter({ catalogue: deps.catalogue.catalogue }))
+      app.use('/api/v1/w/:workspaceId/knowledge', ...chain, knowledgeRouter({ knowledge: deps.catalogue.knowledge }))
     }
 
     // #35–39: /w/:workspaceId/channels — behind auth+csrf+tenant like the rest.

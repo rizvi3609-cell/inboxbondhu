@@ -12,7 +12,7 @@ import {
 import { withJobLock } from './jobLock.js'
 import { createMockMetaClient } from '@inboxbondhu/integrations'
 import { QUEUE_SPECS, emailBackoffMs, type JobEnvelope } from './queues.js'
-import { makeOutboundMessageProcessor, makeWebhookIngestProcessor } from './processors.js'
+import { makeCsvImportProcessor, makeOutboundMessageProcessor, makeWebhookIngestProcessor } from './processors.js'
 
 async function main(): Promise<void> {
   const config = loadConfig()
@@ -64,6 +64,7 @@ async function main(): Promise<void> {
     },
   })
   const outboundMessage = makeOutboundMessageProcessor({ log, meta: metaClient, keyring })
+  const csvImport = makeCsvImportProcessor({ log })
 
   const emptyProcessor: Processor<JobEnvelope> = (job) => {
     log.info({ queue: job.queueName, jobId: job.id, requestId: job.data.requestId }, 'no-op processor')
@@ -76,7 +77,9 @@ async function main(): Promise<void> {
         ? (webhookIngest as Processor<never>)
         : spec.name === 'outbound-message'
           ? (outboundMessage as Processor<never>)
-          : (emptyProcessor as Processor<never>)
+          : spec.name === 'csv-import'
+            ? (csvImport as Processor<never>)
+            : (emptyProcessor as Processor<never>)
     return new Worker(spec.name, processor, {
       connection,
       concurrency: spec.concurrency,
