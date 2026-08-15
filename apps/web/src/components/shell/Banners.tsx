@@ -102,11 +102,26 @@ export function QuotaBanner({ workspaceId }: { workspaceId: string }) {
   )
 }
 
-/** user-story Act 9: expiring/expired channel token → Reconnect banner. */
-export function ChannelExpiryBanner({ workspaceId, expiringPageName }: {
-  workspaceId: string
-  expiringPageName: string | null
-}) {
+/** user-story Act 9: expiring/expired channel token → Reconnect banner.
+ *  Fetches once per shell mount (admins get data; 403 for agents/viewers is
+ *  silent — the banner is a nudge, channels/page.tsx is the real surface). */
+export function ChannelExpiryBanner({ workspaceId }: { workspaceId: string }) {
+  const [expiringPageName, setExpiring] = useState<string | null>(null)
+  useEffect(() => {
+    let alive = true
+    void import('@/lib/api-client').then(({ api }) =>
+      api<Array<{ pageName: string; status: string }>>(`/api/v1/w/${workspaceId}/channels`)
+        .then((channels) => {
+          if (!alive) return
+          const bad = channels.find((c) => c.status === 'expired' || c.status === 'expiring')
+          setExpiring(bad?.pageName ?? null)
+        })
+        .catch(() => undefined), // non-admins: banner stays silent
+    )
+    return () => {
+      alive = false
+    }
+  }, [workspaceId])
   return (
     <AnimatePresence>
       {expiringPageName && (
@@ -115,7 +130,7 @@ export function ChannelExpiryBanner({ workspaceId, expiringPageName }: {
           <span>
             Your Page <strong>{expiringPageName}</strong> needs reconnecting — messages stop flowing when the token dies.
           </span>
-          <Link href={`/w/${workspaceId}/settings`} style={{ marginLeft: 'auto' }}>
+          <Link href={`/w/${workspaceId}/settings/channels`} style={{ marginLeft: 'auto' }}>
             <Button small variant="primary">Reconnect Facebook Page</Button>
           </Link>
         </Banner>

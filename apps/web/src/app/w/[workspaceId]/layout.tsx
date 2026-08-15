@@ -84,7 +84,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
               <DegradedBanner />
               <SocketGaveUpBanner />
               <QuotaBanner workspaceId={workspaceId} />
-              <ChannelExpiryBanner workspaceId={workspaceId} expiringPageName={null} />
+              <ChannelExpiryBanner workspaceId={workspaceId} />
               <main style={{ flex: 1, padding: 20, minWidth: 0 }}>{children}</main>
             </div>
           </div>
