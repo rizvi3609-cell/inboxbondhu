@@ -9,7 +9,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { ConversationListItemView, RtConversationUpdated, RtMessageCreated } from '@inboxbondhu/contracts'
+import type { ConversationListItemView, RtConversationUpdated, RtMessageCreated } from '@inboxbondhu/contracts/views'
 import { api } from '@/lib/api-client'
 import { relativeTime } from '@/lib/format'
 import { AnimatePresence, m, rowEnter } from '@/lib/motion'

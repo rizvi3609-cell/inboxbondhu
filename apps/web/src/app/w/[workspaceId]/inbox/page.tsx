@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import type { ConversationDetailView } from '@inboxbondhu/contracts'
+import type { ConversationDetailView } from '@inboxbondhu/contracts/views'
 import { ConversationList } from '@/components/inbox/ConversationList'
 import { Thread } from '@/components/inbox/Thread'
 import { ThreadHeader } from '@/components/inbox/ThreadHeader'

@@ -246,6 +246,28 @@ export interface OrderView {
 
 // ── ops / plans / analytics ────────────────────────────────────────────────
 
+/**
+ * Plan tier limits — THE single source (hardcoding-audit fix). The backend
+ * enforces from this constant (plans service imports it); the dashboard's
+ * plan cards display from it. A pricing change is one edit, both sides.
+ * Runtime truth for CURRENT usage/limits stays the API (usageLedger snapshot).
+ */
+/**
+ * Default pending-invitations cap (spec #33: "max 20"). Single source for the
+ * service default AND the dashboard's "n/20" display. Ops may raise it via
+ * MAX_PENDING_INVITES — that override reaches the service, not this display
+ * default (flagged in FE-PHASE-4.1 report).
+ */
+export const MAX_PENDING_INVITATIONS_DEFAULT = 20
+
+export type PlanId = 'trial' | 'starter' | 'growth'
+export const PLAN_LIMITS: Record<PlanId, { conversations: number; products: number }> &
+  Record<string, { conversations: number; products: number } | undefined> = {
+  trial: { conversations: 100, products: 50 },
+  starter: { conversations: 1000, products: 500 },
+  growth: { conversations: 5000, products: 2000 },
+}
+
 export interface QuotaStatusView {
   plan: string
   periodKey: string

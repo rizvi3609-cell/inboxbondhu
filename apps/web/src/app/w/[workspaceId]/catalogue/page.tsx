@@ -9,7 +9,7 @@
  */
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react'
 import { useParams } from 'next/navigation'
-import type { ImportView, ProductView, RtImportProgress } from '@inboxbondhu/contracts'
+import type { ImportView, ProductView, RtImportProgress } from '@inboxbondhu/contracts/views'
 import { api, ApiFailure } from '@/lib/api-client'
 import { taka } from '@/lib/format'
 import { AnimatePresence, m, rowEnter } from '@/lib/motion'

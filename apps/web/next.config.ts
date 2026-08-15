@@ -22,6 +22,17 @@ const nextConfig: NextConfig = {
     ]
   },
   poweredByHeader: false,
+  // contracts ships TS source with ESM ".js" import specifiers (tsc rewrites
+  // them for Node). Type-only imports erased before webpack ever looked; now
+  // that the web imports VALUES (PLAN_LIMITS — the hardcoding-audit fix),
+  // webpack must map ".js" → ".ts" for workspace source.
+  webpack: (config) => {
+    config.resolve.extensionAlias = {
+      ...config.resolve.extensionAlias,
+      '.js': ['.ts', '.tsx', '.js'],
+    }
+    return config
+  },
 }
 
 export default nextConfig

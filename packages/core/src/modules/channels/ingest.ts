@@ -9,6 +9,7 @@ import mongoose from 'mongoose'
 import {
   ChannelConnection, Conversation, Customer, Message, UsageLedger, WebhookEvent, Workspace,
 } from '../../db/models/index.js'
+import { PLAN_LIMITS } from '@inboxbondhu/contracts'
 import { DhakaTime } from '../../kernel/dhakaTime.js'
 
 const DAY_MS = 86_400_000
@@ -183,12 +184,17 @@ export async function processWebhookEvent(dedupeKey: string, notify?: IngestNoti
     ).exec()
     if (marked.modifiedCount === 1) {
       const ws = await Workspace.findOne({ _id: workspaceId }).exec()
-      const limits: Record<string, number> = { trial: 100, starter: 1000, growth: 5000 }
+      // Hardcoding-audit fix: PLAN_LIMITS from contracts — was the 4th copy
+      // of the tier numbers (channels may import the shared constant; the
+      // §5.1 ban is on importing the plans MODULE).
       await UsageLedger.findOneAndUpdate(
         { workspaceId, periodKey },
         {
           $inc: { conversationsUsed: 1 },
-          $setOnInsert: { plan: ws?.plan ?? 'trial', conversationsLimit: limits[ws?.plan ?? 'trial'] ?? 100 },
+          $setOnInsert: {
+            plan: ws?.plan ?? 'trial',
+            conversationsLimit: PLAN_LIMITS[ws?.plan ?? 'trial']?.conversations ?? PLAN_LIMITS.trial.conversations,
+          },
         },
         { upsert: true, setDefaultsOnInsert: true },
       ).exec()

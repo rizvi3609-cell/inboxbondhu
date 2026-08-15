@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import type { ChannelView } from '@inboxbondhu/contracts'
+import type { ChannelView } from '@inboxbondhu/contracts/views'
 import { api, ApiFailure } from '@/lib/api-client'
 import { dhakaDate } from '@/lib/format'
 import { AnimatePresence, m, rowEnter } from '@/lib/motion'

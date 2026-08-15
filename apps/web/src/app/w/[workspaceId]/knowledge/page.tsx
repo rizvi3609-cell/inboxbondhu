@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useParams } from 'next/navigation'
-import type { KnowledgeItemView } from '@inboxbondhu/contracts'
+import type { KnowledgeItemView } from '@inboxbondhu/contracts/views'
 import { api, ApiFailure } from '@/lib/api-client'
 import { AnimatePresence, m, rowEnter } from '@/lib/motion'
 import { Badge, Button, CheckDraw, EmptyState, Tabs } from '@/components/ui/primitives'

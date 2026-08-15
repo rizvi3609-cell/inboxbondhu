@@ -6,7 +6,7 @@
  * Reopen with OCC + the mid-capture 422 dialog.
  */
 import { useState } from 'react'
-import type { ConversationDetailView } from '@inboxbondhu/contracts'
+import type { ConversationDetailView } from '@inboxbondhu/contracts/views'
 import { api, ApiFailure } from '@/lib/api-client'
 import { countdown, taka } from '@/lib/format'
 import { AnimatePresence, m } from '@/lib/motion'

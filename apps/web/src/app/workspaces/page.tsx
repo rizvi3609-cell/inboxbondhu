@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, ApiFailure } from '@/lib/api-client'
-import type { WorkspaceListItemView } from '@inboxbondhu/contracts'
+import type { WorkspaceListItemView } from '@inboxbondhu/contracts/views'
 
 export default function WorkspacesPage() {
   const router = useRouter()

@@ -11,7 +11,7 @@
  *  - Take Over ↔ Return to AI morph; 422 mid-capture dialog copy
  */
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
-import type { ConversationDetailView, MessageView, RtMessageCreated } from '@inboxbondhu/contracts'
+import type { ConversationDetailView, MessageView, RtMessageCreated } from '@inboxbondhu/contracts/views'
 import { api, ApiFailure, newIdempotencyKey } from '@/lib/api-client'
 import { countdown, dhakaTime, taka } from '@/lib/format'
 import { AnimatePresence, m, bubbleEnter } from '@/lib/motion'

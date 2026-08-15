@@ -9,6 +9,7 @@
  */
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useParams } from 'next/navigation'
+import { MAX_PENDING_INVITATIONS_DEFAULT } from '@inboxbondhu/contracts/views'
 import { api, ApiFailure } from '@/lib/api-client'
 import { dhakaDate, relativeTime } from '@/lib/format'
 import { AnimatePresence, m, rowEnter } from '@/lib/motion'
@@ -171,7 +172,7 @@ export default function TeamPage() {
       </section>
 
       <section>
-        <h3>Pending invitations {invitations.length > 0 && <span className="muted">({invitations.length}/20)</span>}</h3>
+        <h3>Pending invitations {invitations.length > 0 && <span className="muted">({invitations.length}/{MAX_PENDING_INVITATIONS_DEFAULT})</span>}</h3>
         {invitations.length === 0 ? (
           <p className="muted" style={{ fontSize: 12 }}>None pending.</p>
         ) : (

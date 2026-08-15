@@ -7,12 +7,19 @@ import { AppError, VersionConflictError } from '../../kernel/appError.js'
 import { Result } from '../../kernel/result.js'
 import type { TenantContext } from '../../kernel/tenantContext.js'
 import { AuditLog, Import, Product, Workspace } from '../../db/models/index.js'
+import { PLAN_LIMITS } from '@inboxbondhu/contracts'
 import {
   CsvEncodingError, decodeUtf8Strict, parseCsv, parseProductRow, validateHeader,
   type ImportRowError,
 } from './csv.js'
 
-export const PLAN_PRODUCT_CAPS: Record<string, number> = { trial: 50, starter: 500, growth: 2000 }
+// Hardcoding-audit fix: derived from contracts' PLAN_LIMITS — the third copy
+// of these numbers is gone; a pricing change is one edit in contracts.
+// (§5.1 note: catalogue must not import the plans MODULE — importing the
+// shared CONSTANT from contracts is exactly the sanctioned alternative.)
+export const PLAN_PRODUCT_CAPS: Record<string, number> = Object.fromEntries(
+  Object.entries(PLAN_LIMITS).flatMap(([id, limits]) => (limits ? [[id, limits.products]] : [])),
+)
 const CHECKPOINT_EVERY = 100
 
 export interface ProductInput {

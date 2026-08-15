@@ -9,7 +9,7 @@
  * it (spec §5.2 item 3).
  */
 import type { Socket } from 'socket.io-client'
-import type { RtEventMap } from '@inboxbondhu/contracts'
+import type { RtEventMap } from '@inboxbondhu/contracts/views'
 import { api } from './api-client'
 
 export type ConnState = 'connecting' | 'connected' | 'reconnecting' | 'gave_up' | 'offline'

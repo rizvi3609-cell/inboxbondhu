@@ -9,17 +9,26 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import type { PlanView, QuotaStatusView } from '@inboxbondhu/contracts'
+import { PLAN_LIMITS, type PlanView, type QuotaStatusView } from '@inboxbondhu/contracts/views'
 import { api, ApiFailure } from '@/lib/api-client'
 import { useRealtime } from '@/lib/realtime-context'
 import { Badge, Button, Meter, Skeleton } from '@/components/ui/primitives'
 import { Dialog, useToast } from '@/components/ui/overlay'
 
-const PLAN_INFO: Record<string, { label: string; conversations: number; products: number; blurb: string }> = {
-  trial: { label: 'Trial', conversations: 100, products: 50, blurb: '14 days to prove it on your Page' },
-  starter: { label: 'Starter', conversations: 1000, products: 500, blurb: 'For one busy Page' },
-  growth: { label: 'Growth', conversations: 5000, products: 2000, blurb: 'For multi-Page sellers' },
+// Numbers come from contracts' PLAN_LIMITS — the enforcement source
+// (hardcoding-audit fix). Only labels/blurbs are display-local.
+const PLAN_COPY: Record<string, { label: string; blurb: string }> = {
+  trial: { label: 'Trial', blurb: '14 days to prove it on your Page' },
+  starter: { label: 'Starter', blurb: 'For one busy Page' },
+  growth: { label: 'Growth', blurb: 'For multi-Page sellers' },
 }
+const PLAN_INFO: Record<string, { label: string; conversations: number; products: number; blurb: string }> =
+  Object.fromEntries(
+    Object.entries(PLAN_COPY).map(([id, copy]) => [
+      id,
+      { ...copy, conversations: PLAN_LIMITS[id]?.conversations ?? 0, products: PLAN_LIMITS[id]?.products ?? 0 },
+    ]),
+  )
 
 export default function PlanPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>()

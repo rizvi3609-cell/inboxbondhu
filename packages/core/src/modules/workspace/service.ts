@@ -13,6 +13,7 @@ import { withTx } from '../../db/withTx.js'
 import {
   AuditLog, Conversation, Invitation, Membership, OutboxEvent, Session, User, Workspace,
 } from '../../db/models/index.js'
+import { MAX_PENDING_INVITATIONS_DEFAULT } from '@inboxbondhu/contracts'
 import { opaqueToken, sha256Hex, verifyPassword } from '../identity/crypto.js'
 import { findUserWithPasswordHash } from '../identity/repository.js'
 
@@ -23,7 +24,7 @@ export class WorkspaceService {
   constructor(
     /** Synchronous cache invalidation — wired to Redis in apps/api. */
     private readonly invalidateMembershipCache: MembershipCacheInvalidator = async () => undefined,
-    private readonly maxPendingInvites = 20,
+    private readonly maxPendingInvites: number = MAX_PENDING_INVITATIONS_DEFAULT,
   ) {}
 
   // ── Workspaces ────────────────────────────────────────────────────────────

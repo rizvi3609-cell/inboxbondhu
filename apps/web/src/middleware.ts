@@ -7,12 +7,23 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = ['/login', '/register', '/verify', '/reset', '/unlock', '/forgot', '/design']
 
+// Hardcoding-audit fix: the ws://localhost exception exists ONLY outside
+// production. Next.js statically inlines NODE_ENV at build time — a
+// production build ships the strict PRD §4.1 connect-src with no localhost
+// residue. Edge middleware cannot import packages/config (server Zod loader),
+// hence the documented lint exception, same as next.config.ts.
+// eslint-disable-next-line no-restricted-properties
+const IS_PROD = process.env.NODE_ENV === 'production'
+const CONNECT_SRC = IS_PROD
+  ? "connect-src 'self' wss://*.inboxbondhu.me"
+  : "connect-src 'self' wss://*.inboxbondhu.me ws://localhost:* ws://127.0.0.1:*"
+
 export function middleware(request: NextRequest): NextResponse {
   const nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString('base64')
   const csp = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
-    "connect-src 'self' wss://*.inboxbondhu.me ws://localhost:* ws://127.0.0.1:*",
+    CONNECT_SRC,
     "img-src 'self' https: data:",
     "style-src 'self' 'unsafe-inline'",
     "object-src 'none'",

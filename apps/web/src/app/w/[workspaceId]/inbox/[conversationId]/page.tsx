@@ -8,7 +8,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import type { ConversationDetailView } from '@inboxbondhu/contracts'
+import type { ConversationDetailView } from '@inboxbondhu/contracts/views'
 import { Thread } from '@/components/inbox/Thread'
 import { ThreadHeader } from '@/components/inbox/ThreadHeader'
 

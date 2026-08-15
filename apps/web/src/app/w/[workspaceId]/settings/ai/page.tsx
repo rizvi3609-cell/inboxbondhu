@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import type { WorkspaceView } from '@inboxbondhu/contracts'
+import type { WorkspaceView } from '@inboxbondhu/contracts/views'
 import { api, ApiFailure } from '@/lib/api-client'
 import { Badge, Button, Skeleton } from '@/components/ui/primitives'
 import { ConflictDialog, useToast, type ConflictInfo } from '@/components/ui/overlay'

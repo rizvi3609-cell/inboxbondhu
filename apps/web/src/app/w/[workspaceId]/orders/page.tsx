@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import type { OrderView, RtOrderUpdated } from '@inboxbondhu/contracts'
+import type { OrderView, RtOrderUpdated } from '@inboxbondhu/contracts/views'
 import { api, ApiFailure } from '@/lib/api-client'
 import { dhakaDate, taka } from '@/lib/format'
 import { AnimatePresence, m, rowEnter } from '@/lib/motion'

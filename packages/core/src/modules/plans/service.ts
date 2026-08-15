@@ -10,12 +10,12 @@ import { Result } from '../../kernel/result.js'
 import type { TenantContext } from '../../kernel/tenantContext.js'
 import { DhakaTime } from '../../kernel/dhakaTime.js'
 import { Conversation, OutboxEvent, Product, UsageLedger, Workspace } from '../../db/models/index.js'
+// Hardcoding-audit fix: the limits table lives in contracts — ONE source for
+// enforcement (here) and display (dashboard plan cards). Re-exported so all
+// existing `import { PLAN_LIMITS } from plans` call sites stay valid.
+import { PLAN_LIMITS } from '@inboxbondhu/contracts'
 
-export const PLAN_LIMITS: Record<string, { conversations: number; products: number }> = {
-  trial: { conversations: 100, products: 50 },
-  starter: { conversations: 1000, products: 500 },
-  growth: { conversations: 5000, products: 2000 },
-}
+export { PLAN_LIMITS }
 
 export interface QuotaStatus {
   plan: string

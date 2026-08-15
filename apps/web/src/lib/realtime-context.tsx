@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext } from 'react'
-import type { RtEventMap } from '@inboxbondhu/contracts'
+import type { RtEventMap } from '@inboxbondhu/contracts/views'
 import type { ConnState } from './socket'
 
 export type EventHandler = <K extends keyof RtEventMap>(event: K, payload: RtEventMap[K]) => void
