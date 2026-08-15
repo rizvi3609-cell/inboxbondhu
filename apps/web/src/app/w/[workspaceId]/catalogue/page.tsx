@@ -6,12 +6,15 @@ import { api, ApiFailure } from '@/lib/api-client'
 import { taka, type ProductRow } from '@/lib/types'
 import { useRealtime } from '@/lib/realtime-context'
 
+// Field names match GET /imports/:id AND the import.progress socket payload
+// exactly (audit M-2): lastProcessedRow / successCount / failureCount.
 interface ImportStatus {
   id: string
   status: string
   totalRows: number
-  processedRows: number
-  errorRows?: number
+  lastProcessedRow: number
+  successCount?: number
+  failureCount?: number
 }
 
 export default function CataloguePage() {
@@ -34,8 +37,11 @@ export default function CataloguePage() {
   useEffect(
     () => subscribe((event, payload) => {
       if (event === 'import.progress') {
-        setImporting((prev) => (prev ? { ...prev, ...payload } as ImportStatus : prev))
-        void load().catch(() => undefined)
+        // Payload: {importId, status, lastProcessedRow, totalRows, successCount, failureCount}
+        setImporting((prev) =>
+          prev && payload['importId'] === prev.id ? ({ ...prev, ...payload, id: prev.id } as ImportStatus) : prev,
+        )
+        if (payload['status'] === 'completed') void load().catch(() => undefined)
       }
     }),
     [subscribe, load],
@@ -45,11 +51,11 @@ export default function CataloguePage() {
     setError(null)
     try {
       const content = await file.text() // strict UTF-8 checked server-side
-      const started = await api<{ importId: string }>(`/api/v1/w/${workspaceId}/products/import`, {
+      const started = await api<{ importId: string; totalRows?: number }>(`/api/v1/w/${workspaceId}/products/import`, {
         method: 'POST',
         body: { fileName: file.name, content, encoding: 'utf8' },
       })
-      setImporting({ id: started.importId, status: 'processing', totalRows: 0, processedRows: 0 })
+      setImporting({ id: started.importId, status: 'processing', totalRows: started.totalRows ?? 0, lastProcessedRow: 0 })
       // Poll #51 until terminal (socket import.progress also updates it).
       const poll = setInterval(() => {
         void api<ImportStatus>(`/api/v1/w/${workspaceId}/imports/${started.importId}`)
@@ -99,7 +105,7 @@ export default function CataloguePage() {
       {importing && (
         <div className="card" style={{ margin: '12px 0' }}>
           Import <strong>{importing.status}</strong>
-          {importing.totalRows > 0 && <> — {importing.processedRows}/{importing.totalRows} rows{importing.errorRows ? `, ${importing.errorRows} errors` : ''}</>}
+          {importing.totalRows > 0 && <> — {importing.lastProcessedRow}/{importing.totalRows} rows{importing.failureCount ? `, ${importing.failureCount} errors` : ''}</>}
         </div>
       )}
       {error && <p className="error-text">{error}</p>}

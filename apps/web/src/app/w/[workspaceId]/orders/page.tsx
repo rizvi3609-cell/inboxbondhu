@@ -80,7 +80,7 @@ export default function OrdersPage() {
                 <td>{taka(o.totalMinor)}</td>
                 <td><span className={`badge ${FULFILLMENT_BADGE[o.fulfillmentStatus] ?? 'draft'}`}>{o.fulfillmentStatus}</span></td>
                 <td><span className={`badge ${o.paymentStatus === 'Paid' ? 'approved' : 'draft'}`}>{o.paymentStatus}</span></td>
-                <td className="muted">{new Date(o.createdAt).toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka' })}</td>
+                <td className="muted">{o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-GB', { timeZone: 'Asia/Dhaka' }) : '—'}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>
                   {o.fulfillmentStatus === 'AwaitingConfirmation' && (
                     <button className="primary" onClick={() => void act(o, 'confirm')}>Confirm</button>

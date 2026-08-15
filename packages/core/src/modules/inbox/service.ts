@@ -82,6 +82,8 @@ export class InboxService {
       requestId: string
       payload: { messageId: string }
     }) => Promise<void>,
+    /** P9.1 (audit H-1): realtime hint sink, injected — inbox never imports notifications (§5.1). */
+    private readonly notify?: (room: string, event: string, payload: Record<string, unknown>) => void,
   ) {}
 
   // ── #40 GET /conversations ────────────────────────────────────────────────
@@ -299,6 +301,14 @@ export class InboxService {
       after: set,
       requestId: ctx.requestId,
     })
+    // P9.1 (audit H-1): take-over/resolve/assign reflected live in other tabs.
+    this.notify?.(`ws:${ctx.workspaceId}`, 'conversation.updated', {
+      conversationId: String(conv._id),
+      ...(changes.status !== undefined ? { status: changes.status } : {}),
+      ...(changes.mode !== undefined ? { mode: changes.mode } : {}),
+      at: new Date().toISOString(),
+    })
+
     return Result.ok({ version: expectedVersion + 1 })
   }
 
@@ -353,6 +363,15 @@ export class InboxService {
       workspaceId: ctx.workspaceId,
       requestId: ctx.requestId,
       payload: { messageId: String(message._id) },
+    })
+
+    // P9.1 (audit H-1): other agents' tabs see the reply within 1 s (§12.3).
+    this.notify?.(`ws:${ctx.workspaceId}`, 'message.created', {
+      conversationId: String(conv._id),
+      messageId: String(message._id),
+      preview: text.slice(0, 140),
+      direction: 'outbound',
+      at: new Date().toISOString(),
     })
 
     return Result.ok({ messageId: String(message._id), replayed: false })

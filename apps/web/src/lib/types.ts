@@ -71,7 +71,7 @@ export interface OrderRow {
   totalMinor: number
   recipientName: string
   deliveryZone: string
-  createdAt: string
+  createdAt: string | null // serialised by the API since P9.1 (audit M-1)
   version: number
 }
 

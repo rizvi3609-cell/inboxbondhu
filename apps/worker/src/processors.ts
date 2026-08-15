@@ -28,10 +28,12 @@ export interface OutboundMessageJob {
 export function makeWebhookIngestProcessor(deps: {
   log: Logger
   queues: { conversationAi: Queue; mediaFetch: Queue }
+  /** P9.1 (audit H-1): realtime publisher — message.created reaches the dashboard. */
+  notify?: (room: string, event: string, payload: Record<string, unknown>) => void
 }): Processor<WebhookIngestJob> {
   return async (job: Job<WebhookIngestJob>) => {
     const { dedupeKey, requestId } = job.data
-    const outcome = await processWebhookEvent(dedupeKey)
+    const outcome = await processWebhookEvent(dedupeKey, deps.notify)
     deps.log.info(
       { requestId, dedupeKey, status: outcome.status, workspaceId: outcome.workspaceId },
       'webhook-ingest processed',
@@ -71,11 +73,15 @@ export interface CsvImportJob {
  * The service resumes from lastProcessedRow; a crash redoes ≤ 100 rows with
  * upsert-idempotent writes (MVP gate #9).
  */
-export function makeCsvImportProcessor(deps: { log: Logger }): Processor<CsvImportJob> {
+export function makeCsvImportProcessor(deps: {
+  log: Logger
+  /** P9.1 (audit M-3): checkpoint progress → import.progress socket event. */
+  notify?: (room: string, event: string, payload: Record<string, unknown>) => void
+}): Processor<CsvImportJob> {
   const catalogue = new CatalogueService()
   return async (job: Job<CsvImportJob>) => {
     const { workspaceId, requestId, payload } = job.data
-    const result = await catalogue.processImport(workspaceId, payload.importId)
+    const result = await catalogue.processImport(workspaceId, payload.importId, deps.notify)
     deps.log.info({ requestId, workspaceId, importId: payload.importId, ...result }, 'csv-import finished')
   }
 }

@@ -108,6 +108,17 @@ const SOCKET_EVENTS: Record<string, (p: Record<string, unknown>) => { room: stri
     event: 'session.revoked',
     payload: { reason: 'member_removed', at: new Date().toISOString() },
   }),
+  // P9.1 (audit M-3): quota events reach the dashboard banner, not just email.
+  'quota.warning': (p) => ({
+    room: `ws:${String(p['workspaceId'] ?? '')}`,
+    event: 'quota.warning',
+    payload: { level: 80, used: p['used'] ?? null, limit: p['limit'] ?? null, at: new Date().toISOString() },
+  }),
+  'quota.blocked': (p) => ({
+    room: `ws:${String(p['workspaceId'] ?? '')}`,
+    event: 'quota.warning',
+    payload: { level: 100, used: p['used'] ?? null, limit: p['limit'] ?? null, at: new Date().toISOString() },
+  }),
 }
 
 /**

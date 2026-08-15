@@ -10,7 +10,7 @@ import type { Server as HttpServer } from 'node:http'
 import { Server as SocketIoServer } from 'socket.io'
 import { createAdapter } from '@socket.io/redis-adapter'
 import type { Redis } from 'ioredis'
-import { Membership } from '@inboxbondhu/core'
+import { Membership, parseRealtimeEvent, REALTIME_CHANNEL } from '@inboxbondhu/core'
 
 const TICKET_TTL_MS = 60_000
 const HEARTBEAT_MS = 5 * 60_000
@@ -113,6 +113,18 @@ export function createRealtimeGateway(
     socket.on('disconnect', () => clearInterval(heartbeat))
   })
 
+  // P9.1 (audit H-1): the production fan-out path. Producers anywhere
+  // (worker ingest/csv/dispatcher, api inbox service) publish onto ONE Redis
+  // channel; every api instance receives and emits to its local room members.
+  // A dedicated subscriber connection — the adapter's `sub` psubscribes to
+  // the adapter's own pattern space and must not be mixed with ours.
+  const bridge = redis.duplicate({ enableOfflineQueue: true })
+  void bridge.subscribe(REALTIME_CHANNEL).catch(() => undefined) // Redis down ⇒ realtime degrades (P-02)
+  bridge.on('message', (_channel: string, raw: string) => {
+    const msg = parseRealtimeEvent(raw)
+    if (msg) io.to(msg.room).emit(msg.event, msg.payload)
+  })
+
   return {
     emit(room, event, payload) {
       io.to(room).emit(event, payload) // best-effort; DB is authoritative
@@ -121,6 +133,7 @@ export function createRealtimeGateway(
       await io.close()
       pub.disconnect()
       sub.disconnect()
+      bridge.disconnect()
     },
   }
 }

@@ -233,7 +233,12 @@ export class CatalogueService {
    * sku} makes the redo idempotent (zero duplicates — MVP gate #9).
    * Rows sharing a SKU merge as additional variants of one product.
    */
-  async processImport(workspaceId: string, importId: string): Promise<{ status: string; success: number; failed: number }> {
+  async processImport(
+    workspaceId: string,
+    importId: string,
+    /** P9.1 (audit M-3): checkpoint progress hint — injected, never imported (§5.1). */
+    notify?: (room: string, event: string, payload: Record<string, unknown>) => void,
+  ): Promise<{ status: string; success: number; failed: number }> {
     const imp = await Import.findOne({ _id: importId, workspaceId }).exec()
     if (!imp || imp.status === 'cancelled' || imp.status === 'completed') {
       return { status: imp?.status ?? 'missing', success: imp?.successCount ?? 0, failed: imp?.failureCount ?? 0 }
@@ -337,6 +342,12 @@ export class CatalogueService {
           // Cancelled mid-run — stop at this checkpoint as specified.
           return { status: 'cancelled', success, failed }
         }
+        // P9.1 (audit M-3): live progress for the catalogue page.
+        notify?.(`ws:${workspaceId}`, 'import.progress', {
+          importId, status: 'processing',
+          lastProcessedRow: processed, totalRows: rows.length,
+          successCount: success, failureCount: failed,
+        })
       }
     }
 
@@ -344,6 +355,11 @@ export class CatalogueService {
       { _id: importId, workspaceId, status: 'processing' },
       { $set: { status: 'completed', completedAt: new Date() } },
     ).exec()
+    notify?.(`ws:${workspaceId}`, 'import.progress', {
+      importId, status: 'completed',
+      lastProcessedRow: processed, totalRows: rows.length,
+      successCount: success, failureCount: failed,
+    })
     return { status: 'completed', success, failed }
   }
 

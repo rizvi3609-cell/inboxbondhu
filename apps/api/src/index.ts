@@ -35,11 +35,18 @@ async function main(): Promise<void> {
   const webhookIngestQueue = new Queue('webhook-ingest', { connection: { url: config.REDIS_URL } })
 
   // Phase 4: inbox service — outbound-message queue + Redis idempotency store.
-  const { InboxService, redisIdempotencyStore, CatalogueService, KnowledgeService, OrdersService, PaymentsService, ObservabilityService, PlansService } = await import('@inboxbondhu/core')
+  const { InboxService, redisIdempotencyStore, CatalogueService, KnowledgeService, OrdersService, PaymentsService, ObservabilityService, PlansService, makeRealtimePublisher } = await import('@inboxbondhu/core')
   const outboundQueue = new Queue('outbound-message', { connection: { url: config.REDIS_URL } })
-  const inboxService = new InboxService(redisIdempotencyStore(clients.redis), async (job) => {
-    await outboundQueue.add('outbound-message', job)
-  })
+  // P9.1 (audit H-1): agent replies + conversation updates hint other tabs
+  // through the same rt:events bridge the worker uses.
+  const notify = makeRealtimePublisher(clients.redis)
+  const inboxService = new InboxService(
+    redisIdempotencyStore(clients.redis),
+    async (job) => {
+      await outboundQueue.add('outbound-message', job)
+    },
+    notify,
+  )
 
   // Phase 5: catalogue + knowledge + csv-import queue.
   const csvImportQueue = new Queue('csv-import', { connection: { url: config.REDIS_URL } })
@@ -103,8 +110,10 @@ async function main(): Promise<void> {
   const server: Server = app.listen(config.PORT, '0.0.0.0', () => {
     log.info({ port: config.PORT }, 'api listening')
   })
+  // The gateway subscribes to the rt:events bridge internally (P9.1) —
+  // producers in this process AND the worker publish through Redis.
   const realtime = createRealtimeGateway(server, clients.redis, config.TICKET_SECRET || config.JWT_SECRET)
-  void realtime // fan-out consumers arrive with the dispatcher wiring below
+  void realtime // held for lifetime; closed with the server on shutdown
 
   // Graceful shutdown: stop accepting, drain in-flight, close connections.
   let shuttingDown = false

@@ -36,7 +36,13 @@ interface MessagingEntry {
   read?: { watermark?: number }
 }
 
-export async function processWebhookEvent(dedupeKey: string): Promise<IngestOutcome> {
+/**
+ * P9.1 (audit H-1): realtime hint sink, injected by the caller — channels
+ * never imports the notifications module (§5.1). Structural type on purpose.
+ */
+export type IngestNotify = (room: string, event: string, payload: Record<string, unknown>) => void
+
+export async function processWebhookEvent(dedupeKey: string, notify?: IngestNotify): Promise<IngestOutcome> {
   const event = await WebhookEvent.findOne({ dedupeKey }).exec()
   if (!event || event.processStatus === 'processed') {
     return { status: 'skipped', enqueueAi: false, mediaJobs: [] }
@@ -193,6 +199,16 @@ export async function processWebhookEvent(dedupeKey: string): Promise<IngestOutc
     { _id: event._id },
     { $set: { workspaceId, processStatus: 'processed', processedAt: now } },
   ).exec()
+
+  // P9.1 (audit H-1): the realtime hint — IDs and a preview only (§12.3).
+  // Best-effort by contract (§12.4); the DB write above is the truth.
+  notify?.(`ws:${String(workspaceId)}`, 'message.created', {
+    conversationId: String(conversation._id),
+    messageId,
+    preview: (text ?? '[attachment]').slice(0, 140),
+    direction: 'inbound',
+    at: now.toISOString(),
+  })
 
   // AI eligibility — the actual enqueue is the worker's concern.
   const ws = await Workspace.findOne({ _id: workspaceId }).exec()

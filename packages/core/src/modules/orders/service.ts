@@ -645,6 +645,8 @@ export class OrdersService {
       paymentStatus: o.paymentStatus,
       paymentMethod: o.paymentMethod,
       statusHistory: o.statusHistory,
+      // P9.1 (audit M-1): additive — the dashboard's order table renders it.
+      createdAt: (o as { createdAt?: Date }).createdAt ?? null,
       version: o.version,
     }
   }

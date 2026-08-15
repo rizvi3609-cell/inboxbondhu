@@ -43,11 +43,12 @@ export default function SettingsPage() {
 
   const load = useCallback(async () => {
     const results = await Promise.allSettled([
-      api<{ channels: Channel[] }>(`/api/v1/w/${workspaceId}/channels`),
+      // #35 returns a BARE array (audit H-2) — the one unwrapped list endpoint.
+      api<Channel[]>(`/api/v1/w/${workspaceId}/channels`),
       api<PlanInfo>(`/api/v1/w/${workspaceId}/plan`),
       api<WorkspaceDoc>(`/api/v1/w/${workspaceId}`),
     ])
-    if (results[0].status === 'fulfilled') setChannels(results[0].value.channels)
+    if (results[0].status === 'fulfilled') setChannels(results[0].value)
     if (results[1].status === 'fulfilled') setPlan(results[1].value) // owner-only — 403 for others is fine
     if (results[2].status === 'fulfilled') setWs(results[2].value)
   }, [workspaceId])

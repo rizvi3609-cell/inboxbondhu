@@ -11,7 +11,7 @@ import {
   dispatchOutboxBatch, purgeDispatchedOutbox, createMockEmailClient,
   reconcileUsage, reconcileStock, PlansService, ChannelConnection,
   runRetentionPurge, runEvalCanary, pickCanarySubset, mongoTextRetriever,
-  DhakaTime, Workspace, type CanaryCase, type DbClients,
+  DhakaTime, Workspace, makeRealtimePublisher, type CanaryCase, type DbClients,
 } from '@inboxbondhu/core'
 import { withJobLock } from './jobLock.js'
 import { createMockLlmClient, createMockMetaClient } from '@inboxbondhu/integrations'
@@ -62,6 +62,10 @@ async function main(): Promise<void> {
   const keyring = makeKeyring(config.CHANNEL_TOKEN_MASTER_KEY, config.CHANNEL_TOKEN_KEY_VERSION)
   const { client: metaClient } = createMockMetaClient()
 
+  // P9.1 (audit H-1): worker-side realtime publisher — events cross to the
+  // api's gateway over the rt:events Redis channel. Fire-and-forget (§12.4).
+  const notify = makeRealtimePublisher(clients.redis)
+
   const queueByName = new Map(queues.map((q) => [q.name, q]))
   const webhookIngest = makeWebhookIngestProcessor({
     log,
@@ -69,9 +73,10 @@ async function main(): Promise<void> {
       conversationAi: queueByName.get('conversation-ai')!,
       mediaFetch: queueByName.get('media-fetch')!,
     },
+    notify,
   })
   const outboundMessage = makeOutboundMessageProcessor({ log, meta: metaClient, keyring })
-  const csvImport = makeCsvImportProcessor({ log })
+  const csvImport = makeCsvImportProcessor({ log, notify })
 
   // Phase 6: conversation-ai. OPEN QUESTION: mock LLM until a live key —
   // swap is createMockLlmClient → the real OpenAI client, one line.
@@ -162,7 +167,9 @@ async function main(): Promise<void> {
   const { client: emailClient } = createMockEmailClient()
   const dispatcherInterval = setInterval(() => {
     void withJobLock(clients.redis, 'outboxDispatcher', 4_000, () =>
-      dispatchOutboxBatch({ email: emailClient }),
+      // P9.1 (audit H-1): emitSocket finally wired — order.updated,
+      // session.revoked and quota.warning reach the dashboard via the bridge.
+      dispatchOutboxBatch({ email: emailClient, emitSocket: notify }),
     ).then((r) => {
       if (r && (r.dispatched > 0 || r.dead > 0)) log.info(r, 'outboxDispatcher')
     }).catch((err: Error) => log.warn({ err: err.message }, 'outboxDispatcher failed'))
