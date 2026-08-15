@@ -5,7 +5,7 @@
  */
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/register', '/verify', '/reset', '/unlock', '/forgot', '/design']
+const PUBLIC_PATHS = ['/login', '/register', '/verify', '/reset', '/unlock', '/forgot', '/design', '/pricing', '/privacy']
 
 // Hardcoding-audit fix: the ws://localhost exception exists ONLY outside
 // production. Next.js statically inlines NODE_ENV at build time — a

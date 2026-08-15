@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import { api, ApiFailure } from '@/lib/api-client'
+import { StrengthMeter } from '@/components/auth/StrengthMeter'
 
 export default function RegisterPage() {
   const [name, setName] = useState('')
@@ -60,7 +61,8 @@ export default function RegisterPage() {
         </label>
         <label>
           Password
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={10} maxLength={128} autoComplete="new-password" />
+          <StrengthMeter password={password} />
         </label>
         {error && <p className="error-text">{error}</p>}
         <button className="primary" disabled={busy} type="submit">{busy ? 'Creating…' : 'Create account'}</button>
