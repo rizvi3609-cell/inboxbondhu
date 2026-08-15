@@ -237,7 +237,7 @@ export interface OrderView {
   recipientName: string
   recipientPhone: string
   fulfillmentStatus: 'Collecting' | 'AwaitingConfirmation' | 'Confirmed' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled'
-  paymentStatus: 'Unpaid' | 'PartiallyPaid' | 'Paid' | 'Refunded' | 'Failed'
+  paymentStatus: 'Unpaid' | 'PaymentPending' | 'PaymentFailed' | 'Paid' | 'Refunded'
   paymentMethod: 'cod' | 'bkash' | 'nagad' | 'rocket' | null
   statusHistory: Array<{ from: string; to: string; at: string; byType: 'ai' | 'agent' | 'system' }>
   createdAt: string | null

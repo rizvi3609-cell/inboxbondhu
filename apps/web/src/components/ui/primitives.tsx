@@ -108,8 +108,8 @@ export function toneFor(status: string): BadgeTone {
     case 'ai': return 'ai'
     case 'human': return 'human'
     case 'open': case 'active': case 'approved': case 'completed': case 'Delivered': case 'Paid': case 'Confirmed': return 'ok'
-    case 'pending': case 'draft': case 'processing': case 'AwaitingConfirmation': case 'Collecting': case 'Unpaid': case 'PartiallyPaid': case 'Processing': case 'Shipped': return 'warn'
-    case 'failed': case 'Cancelled': case 'expired': case 'Refunded': return 'danger'
+    case 'pending': case 'draft': case 'processing': case 'AwaitingConfirmation': case 'Collecting': case 'Unpaid': case 'PaymentPending': case 'Processing': case 'Shipped': return 'warn'
+    case 'failed': case 'Cancelled': case 'expired': case 'Refunded': case 'PaymentFailed': return 'danger'
     case 'resolved': case 'archived': case 'cancelled': case 'disconnected': return 'neutral'
     default: return 'neutral'
   }
