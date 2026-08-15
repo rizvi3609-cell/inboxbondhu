@@ -61,5 +61,5 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Build dashboard (Next.js 15 — P9)
+      - name: Build dashboard + bundle budget gate (FRONTEND-SPEC §5.1)
         run: pnpm build:web

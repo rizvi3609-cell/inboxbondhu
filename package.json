@@ -12,7 +12,7 @@
     "seed": "tsx packages/core/src/db/seed.ts",
     "jsonschema:generate": "tsx packages/core/src/db/jsonSchema/generate.ts",
     "jsonschema:check": "tsx packages/core/src/db/jsonSchema/generate.ts --check",
-    "build:web": "pnpm --filter @inboxbondhu/web build"
+    "build:web": "pnpm --filter @inboxbondhu/web exec next build | tee /tmp/next-build.log && node tools/bundleBudget.mjs < /tmp/next-build.log"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

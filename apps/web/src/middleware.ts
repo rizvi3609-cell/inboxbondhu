@@ -5,7 +5,7 @@
  */
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/register', '/verify', '/reset', '/unlock', '/forgot']
+const PUBLIC_PATHS = ['/login', '/register', '/verify', '/reset', '/unlock', '/forgot', '/design']
 
 export function middleware(request: NextRequest): NextResponse {
   const nonce = Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString('base64')
