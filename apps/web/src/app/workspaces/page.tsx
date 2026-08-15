@@ -3,22 +3,20 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { api, ApiFailure } from '@/lib/api-client'
-import type { WorkspaceSummary } from '@/lib/types'
+import type { WorkspaceListItemView } from '@inboxbondhu/contracts'
 
 export default function WorkspacesPage() {
   const router = useRouter()
-  const [workspaces, setWorkspaces] = useState<WorkspaceSummary[] | null>(null)
+  const [workspaces, setWorkspaces] = useState<WorkspaceListItemView[] | null>(null)
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    // The list endpoint returns the memberships shape: [{workspaceId, name, slug, role}].
-    api<Array<{ workspaceId: string; name: string; slug: string; role: WorkspaceSummary['role']; plan?: WorkspaceSummary['plan'] }>>('/api/v1/workspaces')
+    api<WorkspaceListItemView[]>('/api/v1/workspaces')
       .then((list) => {
-        const mapped = list.map((w) => ({ id: w.workspaceId, name: w.name, slug: w.slug, role: w.role, plan: w.plan ?? 'trial' }))
-        setWorkspaces(mapped)
-        if (mapped.length === 1) router.replace(`/w/${mapped[0]!.id}/inbox`)
+        setWorkspaces(list)
+        if (list.length === 1) router.replace(`/w/${list[0]!.workspaceId}/inbox`)
       })
       .catch((err) => setError(err instanceof ApiFailure ? err.error.message : 'Could not load workspaces.'))
   }, [router])
@@ -47,10 +45,10 @@ export default function WorkspacesPage() {
       ) : (
         <div style={{ display: 'grid', gap: 8, marginBottom: 24 }}>
           {workspaces.map((w) => (
-            <button key={w.id} className="card" style={{ textAlign: 'left' }} onClick={() => router.push(`/w/${w.id}/inbox`)}>
+            <button key={w.workspaceId} className="card" style={{ textAlign: 'left' }} onClick={() => router.push(`/w/${w.workspaceId}/inbox`)}>
               <strong>{w.name}</strong>{' '}
               <span className="badge active">{w.role}</span>{' '}
-              <span className="muted">· {w.plan}</span>
+              <span className="muted">· {w.slug}</span>
             </button>
           ))}
         </div>

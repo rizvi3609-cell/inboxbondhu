@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { api, ApiFailure } from '@/lib/api-client'
-import { taka, type ProductRow } from '@/lib/types'
+import { taka } from '@/lib/format'
+import type { ProductView, RtImportProgress } from '@inboxbondhu/contracts'
 import { useRealtime } from '@/lib/realtime-context'
 
 // Field names match GET /imports/:id AND the import.progress socket payload
@@ -20,13 +21,13 @@ interface ImportStatus {
 export default function CataloguePage() {
   const { workspaceId } = useParams<{ workspaceId: string }>()
   const { subscribe } = useRealtime()
-  const [rows, setRows] = useState<ProductRow[]>([])
+  const [rows, setRows] = useState<ProductView[]>([])
   const [error, setError] = useState<string | null>(null)
   const [importing, setImporting] = useState<ImportStatus | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
-    const data = await api<{ products: ProductRow[] }>(`/api/v1/w/${workspaceId}/products`)
+    const data = await api<{ products: ProductView[] }>(`/api/v1/w/${workspaceId}/products`)
     setRows(data.products)
   }, [workspaceId])
 
@@ -36,13 +37,10 @@ export default function CataloguePage() {
 
   useEffect(
     () => subscribe((event, payload) => {
-      if (event === 'import.progress') {
-        // Payload: {importId, status, lastProcessedRow, totalRows, successCount, failureCount}
-        setImporting((prev) =>
-          prev && payload['importId'] === prev.id ? ({ ...prev, ...payload, id: prev.id } as ImportStatus) : prev,
-        )
-        if (payload['status'] === 'completed') void load().catch(() => undefined)
-      }
+      if (event !== 'import.progress') return
+      const p = payload as RtImportProgress // narrowed by the event key
+      setImporting((prev) => (prev && p.importId === prev.id ? { ...prev, ...p, id: prev.id } : prev))
+      if (p.status === 'completed') void load().catch(() => undefined)
     }),
     [subscribe, load],
   )
@@ -73,7 +71,7 @@ export default function CataloguePage() {
     }
   }
 
-  async function archive(p: ProductRow) {
+  async function archive(p: ProductView) {
     setError(null)
     try {
       await api(`/api/v1/w/${workspaceId}/products/${p.id}`, { method: 'DELETE', ifMatch: p.version })

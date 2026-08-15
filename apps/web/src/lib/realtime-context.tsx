@@ -1,20 +1,25 @@
 'use client'
 
 import { createContext, useContext } from 'react'
+import type { RtEventMap } from '@inboxbondhu/contracts'
+import type { ConnState } from './socket'
 
-export type EventHandler = (event: string, payload: Record<string, unknown>) => void
+export type EventHandler = <K extends keyof RtEventMap>(event: K, payload: RtEventMap[K]) => void
 
 export interface RealtimeCtx {
   subscribe: (fn: EventHandler) => () => void
-  /** Bumps on every reconnect — data views refetch with updatedSince. */
+  /** Bumps on every reconnect — data views run ONE updatedSince merge (C-8). */
   reconnects: number
-  connected: boolean
+  connState: ConnState
+  /** Manual reconnect after the 20-attempt cap (§12.8). */
+  retryNow: () => void
 }
 
 export const RealtimeContext = createContext<RealtimeCtx>({
   subscribe: () => () => undefined,
   reconnects: 0,
-  connected: false,
+  connState: 'offline',
+  retryNow: () => undefined,
 })
 
 export function useRealtime(): RealtimeCtx {

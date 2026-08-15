@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { api, ApiFailure } from '@/lib/api-client'
-import { taka, type OrderRow } from '@/lib/types'
+import { taka } from '@/lib/format'
+import type { OrderView } from '@inboxbondhu/contracts'
 import { useRealtime } from '@/lib/realtime-context'
 
 const FULFILLMENT_BADGE: Record<string, string> = {
@@ -14,12 +15,12 @@ const FULFILLMENT_BADGE: Record<string, string> = {
 export default function OrdersPage() {
   const { workspaceId } = useParams<{ workspaceId: string }>()
   const { subscribe } = useRealtime()
-  const [rows, setRows] = useState<OrderRow[]>([])
+  const [rows, setRows] = useState<OrderView[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
-    const data = await api<{ orders: OrderRow[] }>(`/api/v1/w/${workspaceId}/orders`)
+    const data = await api<{ orders: OrderView[] }>(`/api/v1/w/${workspaceId}/orders`)
     setRows(data.orders)
     setLoading(false)
   }, [workspaceId])
@@ -38,7 +39,7 @@ export default function OrdersPage() {
     [subscribe, load],
   )
 
-  async function act(order: OrderRow, action: 'confirm' | 'cancel') {
+  async function act(order: OrderView, action: 'confirm' | 'cancel') {
     setError(null)
     try {
       await api(`/api/v1/w/${workspaceId}/orders/${order.id}/${action}`, {

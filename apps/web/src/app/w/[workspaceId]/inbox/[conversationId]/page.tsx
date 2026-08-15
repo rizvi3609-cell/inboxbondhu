@@ -3,19 +3,17 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useParams } from 'next/navigation'
 import { api, ApiFailure, newIdempotencyKey } from '@/lib/api-client'
-import type { ConversationRow, MessageRow } from '@/lib/types'
+import type { ConversationDetailView, MessageView } from '@inboxbondhu/contracts'
 import { useRealtime } from '@/lib/realtime-context'
 
-interface ConversationDetail extends ConversationRow {
-  handoverReason: string | null
-  openOrder?: { id: string; orderCode: string | null; totalMinor: number } | null
-}
+// The contracts view IS the detail shape (C-11) — no local extension.
+type ConversationDetail = ConversationDetailView
 
 export default function ConversationPage() {
   const { workspaceId, conversationId } = useParams<{ workspaceId: string; conversationId: string }>()
   const { subscribe } = useRealtime()
   const [conv, setConv] = useState<ConversationDetail | null>(null)
-  const [messages, setMessages] = useState<MessageRow[]>([])
+  const [messages, setMessages] = useState<MessageView[]>([])
   const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -24,7 +22,7 @@ export default function ConversationPage() {
   const load = useCallback(async () => {
     const [c, m] = await Promise.all([
       api<ConversationDetail>(`/api/v1/w/${workspaceId}/conversations/${conversationId}`),
-      api<{ messages: MessageRow[] }>(`/api/v1/w/${workspaceId}/conversations/${conversationId}/messages?limit=100`),
+      api<{ messages: MessageView[] }>(`/api/v1/w/${workspaceId}/conversations/${conversationId}/messages?limit=100`),
     ])
     setConv(c)
     setMessages(m.messages)
@@ -37,9 +35,9 @@ export default function ConversationPage() {
   useEffect(
     () =>
       subscribe((event, payload) => {
-        if (payload['conversationId'] === conversationId || event === 'conversation.updated') {
-          void load().catch(() => undefined)
-        }
+        if (event !== 'message.created' && event !== 'conversation.updated') return
+        const p = payload as { conversationId: string }
+        if (p.conversationId === conversationId) void load().catch(() => undefined)
       }),
     [subscribe, conversationId, load],
   )

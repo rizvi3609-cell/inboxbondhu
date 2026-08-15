@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { api, ApiFailure } from '@/lib/api-client'
-import { taka } from '@/lib/types'
+import { taka } from '@/lib/format'
 
 interface Summary {
   conversations: { total: number; aiHandled: number }

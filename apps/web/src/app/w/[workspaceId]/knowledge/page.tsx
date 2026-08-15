@@ -3,18 +3,18 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useParams } from 'next/navigation'
 import { api, ApiFailure } from '@/lib/api-client'
-import type { KnowledgeRow } from '@/lib/types'
+import type { KnowledgeItemView } from '@inboxbondhu/contracts'
 
 export default function KnowledgePage() {
   const { workspaceId } = useParams<{ workspaceId: string }>()
-  const [rows, setRows] = useState<KnowledgeRow[]>([])
+  const [rows, setRows] = useState<KnowledgeItemView[]>([])
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(async () => {
-    const data = await api<{ items: KnowledgeRow[] }>(`/api/v1/w/${workspaceId}/knowledge`)
+    const data = await api<{ items: KnowledgeItemView[] }>(`/api/v1/w/${workspaceId}/knowledge`)
     setRows(data.items)
   }, [workspaceId])
 
@@ -38,7 +38,7 @@ export default function KnowledgePage() {
     }
   }
 
-  async function approve(item: KnowledgeRow) {
+  async function approve(item: KnowledgeItemView) {
     setError(null)
     try {
       await api(`/api/v1/w/${workspaceId}/knowledge/${item.id}/approve`, { method: 'POST', ifMatch: item.version })
@@ -48,7 +48,7 @@ export default function KnowledgePage() {
     }
   }
 
-  async function remove(item: KnowledgeRow) {
+  async function remove(item: KnowledgeItemView) {
     setError(null)
     try {
       await api(`/api/v1/w/${workspaceId}/knowledge/${item.id}`, { method: 'DELETE', ifMatch: item.version })

@@ -1,116 +1,95 @@
 'use client'
 
+/**
+ * Workspace app shell (F1): MotionRoot + ToastProvider + realtime provider
+ * (§12.8 policy lives in lib/socket), animated sidebar, the four global
+ * banners. Children render inside a <main> that template.tsx animates.
+ */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import Link from 'next/link'
-import { useParams, usePathname, useRouter } from 'next/navigation'
-import { api } from '@/lib/api-client'
-import { connectRealtime, type RealtimeHandle } from '@/lib/socket'
+import { useParams, useRouter } from 'next/navigation'
+import { MotionRoot } from '@/lib/motion'
+import { connectRealtime, type ConnState, type RealtimeHandle } from '@/lib/socket'
 import { RealtimeContext, type EventHandler } from '@/lib/realtime-context'
-
-const NAV = [
-  ['inbox', 'Inbox'],
-  ['orders', 'Orders'],
-  ['catalogue', 'Catalogue'],
-  ['knowledge', 'Knowledge'],
-  ['analytics', 'Analytics'],
-  ['settings', 'Settings'],
-] as const
+import { ToastProvider } from '@/components/ui/overlay'
+import { Sidebar } from '@/components/shell/Sidebar'
+import {
+  ChannelExpiryBanner, DegradedBanner, QuotaBanner, SocketGaveUpBanner,
+} from '@/components/shell/Banners'
 
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const { workspaceId } = useParams<{ workspaceId: string }>()
-  const pathname = usePathname()
   const router = useRouter()
   const handlers = useRef(new Set<EventHandler>())
+  const handleRef = useRef<RealtimeHandle | null>(null)
   const [reconnects, setReconnects] = useState(0)
-  const [connected, setConnected] = useState(false)
-  const [degraded, setDegraded] = useState(false)
+  const [connState, setConnState] = useState<ConnState>('connecting')
 
   useEffect(() => {
-    let handle: RealtimeHandle | null = null
     let cancelled = false
     void connectRealtime(workspaceId, {
       onEvent: (event, payload) => {
         for (const fn of handlers.current) fn(event, payload)
       },
       onReconnect: () => setReconnects((n) => n + 1),
+      onState: (s) => {
+        if (!cancelled) setConnState(s)
+      },
       onRevoked: () => router.push('/workspaces'),
+    }).then((h) => {
+      if (cancelled) {
+        h.close()
+        return
+      }
+      handleRef.current = h
     })
-      .then((h) => {
-        if (cancelled) {
-          h.close()
-          return
-        }
-        handle = h
-        setConnected(true)
-        h.socket.on('disconnect', () => setConnected(false))
-        h.socket.on('connect', () => setConnected(true))
-      })
-      .catch(() => setConnected(false))
     return () => {
       cancelled = true
-      handle?.close()
+      handleRef.current?.close()
+      handleRef.current = null
     }
   }, [workspaceId, router])
 
-  // Degraded-mode banner: /healthz is cheap and dependency-free (proxied).
+  // §7.2: tab hidden >5 min → silent updatedSince sync on focus
+  // (bumping `reconnects` is exactly that signal to every list).
   useEffect(() => {
-    const poll = setInterval(() => {
-      void fetch('/healthz')
-        .then((r) => r.json())
-        .then((j: { data?: { degraded?: boolean } }) => setDegraded(Boolean(j.data?.degraded)))
-        .catch(() => setDegraded(true))
-    }, 30_000)
-    return () => clearInterval(poll)
+    let hiddenAt = 0
+    function onVisibility() {
+      if (document.hidden) {
+        hiddenAt = Date.now()
+      } else if (hiddenAt > 0 && Date.now() - hiddenAt > 5 * 60_000) {
+        setReconnects((n) => n + 1)
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [])
 
-  async function logout() {
-    await api('/api/v1/auth/logout', { method: 'POST' }).catch(() => undefined)
-    router.push('/login')
-  }
-
   return (
-    <RealtimeContext.Provider
-      value={{
-        subscribe: (fn) => {
-          handlers.current.add(fn)
-          return () => handlers.current.delete(fn)
-        },
-        reconnects,
-        connected,
-      }}
-    >
-      <div style={{ display: 'flex', minHeight: '100vh' }}>
-        <aside style={{ width: 200, borderRight: '1px solid var(--border)', background: 'var(--panel)', padding: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 12 }}>
-            InboxBondhu{' '}
-            <span title={connected ? 'realtime connected' : 'realtime offline — reads still work'} style={{ fontSize: 10, color: connected ? 'var(--ok)' : 'var(--muted)' }}>●</span>
-          </div>
-          {NAV.map(([seg, label]) => {
-            const href = `/w/${workspaceId}/${seg}`
-            const active = pathname.startsWith(href)
-            return (
-              <Link key={seg} href={href} style={{
-                padding: '7px 10px', borderRadius: 6, color: active ? 'var(--brand)' : 'var(--text)',
-                background: active ? 'var(--brand-soft)' : 'transparent', fontWeight: active ? 600 : 400,
-              }}>
-                {label}
-              </Link>
-            )
-          })}
-          <div style={{ marginTop: 'auto' }}>
-            <Link href="/workspaces" className="muted" style={{ display: 'block', padding: '6px 10px' }}>Switch workspace</Link>
-            <button onClick={() => void logout()} style={{ width: '100%', marginTop: 4 }}>Sign out</button>
-          </div>
-        </aside>
-        <main style={{ flex: 1, padding: 20, minWidth: 0 }}>
-          {degraded && (
-            <div className="card" style={{ background: '#fef2f2', borderColor: '#fecaca', marginBottom: 12 }}>
-              ⚠ Degraded mode — the database is unreachable. Incoming customer messages are still being received and buffered; the dashboard is read-limited until recovery.
+    <MotionRoot>
+      <ToastProvider>
+        <RealtimeContext.Provider
+          value={{
+            subscribe: (fn) => {
+              handlers.current.add(fn)
+              return () => handlers.current.delete(fn)
+            },
+            reconnects,
+            connState,
+            retryNow: () => handleRef.current?.retryNow(),
+          }}
+        >
+          <div style={{ display: 'flex', minHeight: '100vh' }}>
+            <Sidebar workspaceId={workspaceId} />
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+              <DegradedBanner />
+              <SocketGaveUpBanner />
+              <QuotaBanner workspaceId={workspaceId} />
+              <ChannelExpiryBanner workspaceId={workspaceId} expiringPageName={null} />
+              <main style={{ flex: 1, padding: 20, minWidth: 0 }}>{children}</main>
             </div>
-          )}
-          {children}
-        </main>
-      </div>
-    </RealtimeContext.Provider>
+          </div>
+        </RealtimeContext.Provider>
+      </ToastProvider>
+    </MotionRoot>
   )
 }

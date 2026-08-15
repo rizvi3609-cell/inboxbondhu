@@ -186,6 +186,16 @@ tbody tr:hover { background: var(--panel-2); }
   0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
   40% { transform: translateY(-4px); opacity: 1; }
 }
+@keyframes breathe-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* Sidebar → icon rail below 1024px (FRONTEND-SPEC §6.1 responsive) */
+@media (max-width: 1023px) {
+  :root { --sidebar-w: 56px; }
+  .nav-label { display: none; }
+}
 
 .anim-flash { animation: row-flash 1.2s var(--ease-out-soft) 1; }
 .anim-flash-warn { animation: row-flash-warn 1.6s ease 1; }
